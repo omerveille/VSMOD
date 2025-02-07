@@ -6,7 +6,7 @@ project(PulmonaryArteriesSegmentor)
 # Extension meta-information
 set(EXTENSION_HOMEPAGE "https://www.slicer.org/wiki/Documentation/Nightly/Extensions/PulmonaryArteriesSegmentor")
 set(EXTENSION_CATEGORY "Segmentation")
-set(EXTENSION_CONTRIBUTORS "Azéline Aillet (Student at EPITA), Gabriel Jacquinot (Student at EPITA)")
+set(EXTENSION_CONTRIBUTORS "Azéline Aillet (Student at EPITA), Gabriel Husak (Student at EPITA)")
 set(EXTENSION_DESCRIPTION "A 3D Slicer plugin for pulmonary artery extractions from angiography images.")
 set(EXTENSION_ICONURL "https://www.example.com/Slicer/Extensions/PulmonaryArteriesSegmentor.png")
 set(EXTENSION_SCREENSHOTURLS "https://www.example.com/Slicer/Extensions/PulmonaryArteriesSegmentor/Screenshots/1.png")

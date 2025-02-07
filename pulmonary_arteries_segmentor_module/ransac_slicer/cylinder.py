@@ -517,13 +517,13 @@ def dist_to_branch(p, b):
     return d_min, closest
 
 
-def closest_branch(p, ba):
+def closest_branch(query_point, branch_array):
     """
     Returns the closest branch to point p, within a list of branches ba
 
     Args:
-        p (np.array(dtype=np.float64)): The query point
-        ba (list): An array of branches
+        query_point (np.array(dtype=np.float64)): The query point
+        branch_array (list): An array of branches, which itself is an array of cylinders
 
     Returns:
         np.array(dtype=np.float64): Minimum square distance
@@ -532,22 +532,22 @@ def closest_branch(p, ba):
         int: Index returned by dist_to_branch
     """
 
-    if len(ba) == 0:
+    if len(branch_array) == 0:
         return []
 
-    d_min, closest = dist_to_branch(p, ba[0])
-    bc = ba[0]
-    idx_bc = 0
-    idx_curr = 0
+    d_min, closest_cyl_idx = dist_to_branch(query_point, branch_array[0])
+    best_branch = branch_array[0]
+    idx_best_branch = 0
+    idx_current_branch = 0
 
-    for b in ba[1:]:
-        idx_curr += 1
-        d, cp = dist_to_branch(p, b)
+    for current_branch in branch_array[1:]:
+        idx_current_branch += 1
+        d, current_closest_cyl_idx = dist_to_branch(query_point, current_branch)
 
         if d < d_min:
-            bc = b
-            idx_bc = idx_curr
+            best_branch = current_branch
+            idx_best_branch = idx_current_branch
             d_min = d
-            closest = cp
+            closest_cyl_idx = current_closest_cyl_idx
 
-    return d_min, bc, idx_bc, closest
+    return d_min, best_branch, idx_best_branch, closest_cyl_idx

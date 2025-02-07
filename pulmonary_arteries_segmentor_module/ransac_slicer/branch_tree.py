@@ -87,6 +87,7 @@ class BranchTree(qt.QTreeWidget):
         # Enable clicking on headers
         self.header().setSectionsClickable(True)
         self.header().sectionClicked.connect(self.onHeaderClicked)
+        self.setMinimumHeight(200)
 
     def clear(self):
         """

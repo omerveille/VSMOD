@@ -3,7 +3,7 @@ import math
 
 from .popup_utils import CustomStatusDialog
 
-from .volume import volume
+from .volume import Volume
 
 
 from . import cylinder, helper
@@ -53,7 +53,7 @@ class config:
                                          (clamped to 42 as a minimum, see helper.sample_gauss_sphere).
                                          Defaults to 162.
             n_samples (int, optional): Number of samples to extract on each ray cast. Defaults to 128.
-            ray_length (int, optional): Length of a cast ray, as a proportion of the previous radius. Defaults to 3.
+            ray_length (int, optional): Length of a cast ray, as a proportion of the previous radius. Defaults to 2.
             nb_iter (int, optional): Number of iterations for the algorithm. Defaults to 1000.
         """
 
@@ -580,7 +580,7 @@ def sample_around_cylinder(vol, cyl, cfg):
     p = filter_points(p, current_center, 0.1 * ray_len, 0.9 * ray_len)
 
     if p.shape[0] < 3:
-        return None, None
+        return None
 
     idx = np.argsort(-np.abs(cyl.direction @ cfg.cyl_dir_set.T))
 
@@ -615,7 +615,7 @@ def sample_around_cylinder(vol, cyl, cfg):
             i_max = inliers
 
     if i_max.shape[0] < 3:
-        return None, None
+        return None
 
     r_min = c_max.radius * cfg.r_min
     r_max = c_max.radius * cfg.r_max
@@ -625,7 +625,7 @@ def sample_around_cylinder(vol, cyl, cfg):
     i_max = c_max.select_inliers(p, err_threshold)
 
     if i_max.shape[0] < 3:
-        return None, None
+        return None
 
     i_max = c_max.fix_height(i_max)
     c_max.refine(i_max)
@@ -660,7 +660,7 @@ def next_cylinder(vol, cyl, cfg):
     order = vol.order
     vol.order = 3
 
-    # We try with original cfg.advance_ration, and if it fails, try again with 2*cfg.advance_ratio (typical case when
+    # We try with original cfg.advance_ratio, and if it fails, try again with 2*cfg.advance_ratio (typical case when
     # the artery is highly curved)
     for li in [1, 2]:
         # Compute guess for next cylinder center: advance from current one by cfg.advance_ratio times its height along
@@ -821,7 +821,7 @@ def track_cylinder(vol, cyl, cfg):
 
 
 def track_branch(
-    vol: volume,
+    vol: Volume,
     cyl: cylinder,
     cfg: config,
     centerline: list[np.ndarray],

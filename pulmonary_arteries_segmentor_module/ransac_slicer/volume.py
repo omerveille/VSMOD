@@ -42,7 +42,7 @@ def vtk_to_ras(ijk_to_ras):
     )
 
 
-class volume:
+class Volume:
     """
     Class to represent a volume
     """
@@ -205,7 +205,7 @@ class volume:
         c = (t @ p)[:3]
 
         # Note: could avoid computations by avoiding multiple transforms (TB confirmed)
-        return volume(
+        return Volume(
             sndi.map_coordinates(
                 self._vol, c, order=self.order, prefilter=False
             ).reshape(dim),

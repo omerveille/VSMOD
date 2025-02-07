@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-import subprocess
-import sys
+from slicer.util import pip_install
 from importlib.util import find_spec
 
 from .popup_utils import make_custom_progress_bar
@@ -27,7 +26,7 @@ def install_missing_module(modules: list[str | tuple[str, str]]) -> None:
         progress_bar.labelText = install_text
         slicer.app.processEvents()
 
-        subprocess.check_call([sys.executable, "-m", "pip", "install", module_name])
+        pip_install(module_name)
         install_text = f"{module_name} installed !"
         print(install_text)
         progress_bar.labelText = install_text

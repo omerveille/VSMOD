@@ -1,18 +1,18 @@
 # PulmonaryArteriesSegmentor, a pulmonary artery 3D Slicer segmentation and annotation plugin
 <!-- TOC -->
-* [PulmonaryArteriesSegmentor, a pulmonary artery 3D Slicer segmentation and annotation plugin](#pulmonaryarteriessegmentor-a-pulmonary-artery-3d-slicer-segmentation-and-annotation-plugin)
-  * [Introduction 📜](#introduction-)
-  * [Installation 📂](#installation-)
-  * [Usage of the plugin 💡](#usage-of-the-plugin-)
-    * [Overview 🌐](#overview-)
-    * [The centerline tab ➰](#the-centerline-tab-)
-    * [The segmentation tab 🧩](#the-segmentation-tab-)
-  * [Algorithms involved](#algorithms-involved)
-    * [Centerline ➰](#centerline-)
-    * [Segmentation 🧩](#segmentation-)
-  * [For developers 👩‍💻👨‍💻](#for-developers-)
-    * [Setup pre-commit 🏗️](#setup-pre-commit-)
-    * [Enforce pre-commit to run 🏃](#enforce-pre-commit-to-run-)
+- [PulmonaryArteriesSegmentor, a pulmonary artery 3D Slicer segmentation and annotation plugin](#pulmonaryarteriessegmentor-a-pulmonary-artery-3d-slicer-segmentation-and-annotation-plugin)
+  - [Introduction 📜](#introduction-)
+  - [Installation 📂](#installation-)
+  - [Usage of the plugin 💡](#usage-of-the-plugin-)
+    - [Overview 🌐](#overview-)
+    - [The centerline tab ➰](#the-centerline-tab-)
+    - [The segmentation tab 🧩](#the-segmentation-tab-)
+  - [Algorithms involved](#algorithms-involved)
+    - [Centerline ➰](#centerline-)
+    - [Segmentation 🧩](#segmentation-)
+  - [For developers 👩‍💻👨‍💻](#for-developers-)
+    - [Setup pre-commit 🏗️](#setup-pre-commit-️)
+    - [Enforce pre-commit to run 🏃](#enforce-pre-commit-to-run-)
 <!-- TOC -->
 ## Introduction 📜
 PulmonaryArteriesSegmentor is a 3D Slicer plugin that aims to ease the segmentation and annotation of the pulmonary arteries for angiography images.
@@ -21,7 +21,7 @@ The segmentation and annotation process is divided into three steps:
 2) Start a centerline segmentation from points, and repeat steps 1) and 2) until you have all the vessels you desire.
 3) Once you have all the vessels you want, paint the segmentation to generate an initialization of region-growing.
 
-This plugin is an end-of-study project, made by Azéline Aillet (Student at EPITA) and Gabriel Jacquinot (Student at EPITA), under the direction of Odyssée Merveille (CREATIS) and Morgane Des Ligneris (CREATIS).
+This plugin is an end-of-study project, made by Azéline Aillet (Student at EPITA) and Gabriel Husak (Student at EPITA), under the direction of Odyssée Merveille (CREATIS) and Morgane Des Ligneris (CREATIS).
 
 The RANSAC code is based on the previous work of Jack CARBONERO (CReSTIC), Guillaume DOLLE (LMR) and Nicolas PASSAT (CReSTIC) on the plugin vestract.
 

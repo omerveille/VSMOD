@@ -1,5 +1,5 @@
 #!/usr/bin/env python-real
-from .volume import volume
+from .volume import Volume
 from .popup_utils import CustomProgressBar, CustomStatusDialog
 from .cylinder_ransac import (
     sample_around_cylinder,
@@ -14,7 +14,7 @@ import qt
 
 
 def interpolate_point(
-    cyl_0: cylinder, cyl_1: cylinder, vol: volume, cfg: config, distance: float
+    cyl_0: cylinder, cyl_1: cylinder, vol: Volume, cfg: config, distance: float
 ) -> tuple[list[np.ndarray], list[list[np.ndarray]]]:
     """
     Interpolate points between two cylinders.
@@ -74,7 +74,7 @@ def interpolate_point(
 def interpolate_centerline(
     cylinders: list[cylinder],
     contour_points: list[list[np.ndarray]],
-    vol: volume,
+    vol: Volume,
     cfg: config,
     distance: float,
 ) -> tuple[list[np.ndarray], list[list[np.ndarray]], list[float]]:
@@ -132,15 +132,18 @@ def interpolate_centerline(
 
 
 def run_ransac(
-    vol: volume,
+    vol: Volume,
     starting_point: np.ndarray,
     direction_point: np.ndarray,
     starting_radius: float,
     percent_inlier_points: int,
-    threshold: int,
+    inlier_threshold: int,
     centerline_resolution: float,
+    maximum_turn_angle: float,
+    max_number_of_attempts: int,
+    max_number_of_cylinders: int,
     graph_branches: GraphBranches,
-    isNewBranch: float,
+    isNewBranch: bool,
     progress_dialog: CustomStatusDialog,
 ) -> GraphBranches:
     """
@@ -151,13 +154,16 @@ def run_ransac(
 
     Parameters
     ----------
-    vol: the volume from which points are sampled.
+    vol: the Volume from which points are sampled.
     starting_point: starting point of the first cylinder.
     direction_point: point indicating the direction of the first cylinder.
     starting_radius: radius in mm of the first cylinder to fit.
     percent_inlier_points: percent of inlier required to be considered a correct model.
-    threshold: threshold from which points are considered inlier.
+    inlier_threshold: threshold percentage of the previous cylinder from which points are considered inlier.
     centerline_resolution: minimum distance between centerline points.
+    maximum_turn_angle: the maximum turn angle possible for a vessel.
+    max_number_of_attempts: the maximum number of attempts to find a fitting cylinder.
+    max_number_of_cylinders: the maximum number of cylinder tracked in one tracking.
     graph_branches: the graph branch object.
     isNewBranch: flag to tell if it is the first branch or not.
     progress_dialog: UI window to inform the user on the state of the branch tracking.
@@ -209,15 +215,19 @@ def run_ransac(
 
     direction_point = direction_point - starting_point
 
-    init_radius = starting_radius
-
     # Tracking configuration
     pct_inl = percent_inlier_points / 100.0
-    err = threshold / 100.0
-    cfg = config(percent_inliers=pct_inl, threshold=err)
+    err = inlier_threshold / 100.0
+    cfg = config(
+        percent_inliers=pct_inl,
+        threshold=err,
+        angle_max=maximum_turn_angle,
+        nb_test_max=max_number_of_attempts,
+        nb_iter=max_number_of_cylinders,
+    )
 
     # Initialize tracking
-    cyl = cylinder(starting_point, init_radius, direction_point, height=0)
+    cyl = cylinder(starting_point, starting_radius, direction_point, height=0)
 
     # Perform tracking
     centerline, contour_points, centerline_radius, cylinders = track_branch(

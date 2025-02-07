@@ -5,6 +5,7 @@ import pickle
 import json
 import numpy as np
 from .popup_utils import CustomProgressBar
+from datetime import datetime
 import slicer
 import qt
 import os
@@ -279,8 +280,10 @@ class GraphBranches:
                 contour_points=self.contours_points[i],
             )
 
+        filename = f"graph_tree_{datetime.now().strftime('%Y-%m-%d_%H:%M:%S')}"
+
         # save with pickle
-        with open(os.path.join(folder_path, "graph_tree.pickle"), "wb") as f:
+        with open(os.path.join(folder_path, f"{filename}.pickle"), "wb") as f:
             pickle.dump(branch_graph, f, pickle.HIGHEST_PROTOCOL)
 
         def ndarray_to_list(data):
@@ -296,7 +299,7 @@ class GraphBranches:
         # save to JSON
         data = json_graph.node_link_data(branch_graph)
         data_list = ndarray_to_list(data)
-        with open(os.path.join(folder_path, "graph_tree.json"), "w") as outfile:
+        with open(os.path.join(folder_path, f"{filename}.json"), "w") as outfile:
             json.dump(data_list, outfile, indent=4)
 
         slicer.util.infoDisplay(

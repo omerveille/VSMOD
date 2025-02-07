@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>623</width>
-    <height>763</height>
+    <height>871</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -34,7 +34,7 @@
          </property>
          <layout class="QFormLayout" name="formLayout">
           <item row="0" column="0">
-           <widget class="QLabel" name="label">
+           <widget class="QLabel" name="inputVolumeLabel">
             <property name="text">
              <string>Input volume:</string>
             </property>
@@ -68,7 +68,7 @@
            </widget>
           </item>
           <item row="1" column="0">
-           <widget class="QLabel" name="label_2">
+           <widget class="QLabel" name="startingPointListLabel">
             <property name="text">
              <string>Starting Point List</string>
             </property>
@@ -82,7 +82,7 @@
            </widget>
           </item>
           <item row="1" column="1">
-           <widget class="qMRMLNodeComboBox" name="startingPointSelector">
+           <widget class="qMRMLNodeComboBox" name="directionPointListLabel">
             <property name="toolTip">
              <string>Select a starting point for the first cylinder.</string>
             </property>
@@ -161,6 +161,9 @@
          <property name="text">
           <string>Configuration</string>
          </property>
+         <property name="collapsed">
+          <bool>false</bool>
+         </property>
          <layout class="QFormLayout" name="formLayout_2">
           <item row="0" column="0" colspan="2">
            <widget class="QPushButton" name="placePointButton">
@@ -176,25 +179,82 @@
            </widget>
           </item>
           <item row="1" column="0">
-           <widget class="QLabel" name="inlierPointsLabel">
+           <widget class="QLabel" name="startingRadiusLabel">
             <property name="text">
-             <string>Inlier Points (%)</string>
+             <string>Starting Radius (mm)</string>
             </property>
            </widget>
           </item>
           <item row="1" column="1">
-           <widget class="ctkSliderWidget" name="inlierPointsSliderWidget">
+           <widget class="QDoubleSpinBox" name="startingRadius">
             <property name="toolTip">
-             <string>Select a percentage of inlier points to consider a cylinder valid.</string>
+             <string>Select the radius of the starting cylinder radius in millimeter.</string>
+            </property>
+            <property name="minimum">
+             <double>0.100000000000000</double>
             </property>
             <property name="maximum">
-             <double>100.000000000000000</double>
+             <double>1000.000000000000000</double>
+            </property>
+            <property name="singleStep">
+             <double>0.100000000000000</double>
             </property>
             <property name="value">
-             <double>60.000000000000000</double>
+             <double>10.000000000000000</double>
             </property>
             <property name="SlicerParameterName" stdset="0">
-             <string>percentInlierPoints</string>
+             <string>startingRadius</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="centerlineResolutioLabel">
+            <property name="text">
+             <string>Centerline Resolution (mm)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="ctkDoubleSpinBox" name="centerlineResolution">
+            <property name="toolTip">
+             <string>Maximum distance allowed between centerline points, if two points are too far, points inbetween are interpolated and resampled.</string>
+            </property>
+            <property name="minimum">
+             <double>0.010000000000000</double>
+            </property>
+            <property name="maximum">
+             <double>1000.000000000000000</double>
+            </property>
+            <property name="value">
+             <double>5.000000000000000</double>
+            </property>
+            <property name="SlicerParameterName" stdset="0">
+             <string/>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="ctkCollapsibleButton" name="advancedOptionCollpasibleButton">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="text">
+          <string>Advanced Ransac Configuration</string>
+         </property>
+         <property name="collapsed">
+          <bool>true</bool>
+         </property>
+         <layout class="QFormLayout" name="formLayout_4">
+          <item row="1" column="0">
+           <widget class="QLabel" name="inlierPointsLabel">
+            <property name="text">
+             <string>Inlier Points (%)</string>
             </property>
            </widget>
           </item>
@@ -205,8 +265,74 @@
             </property>
            </widget>
           </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="angleLabel">
+            <property name="text">
+             <string>Maximum cylinder turn angle</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QDoubleSpinBox" name="maximumTurnAngle">
+            <property name="maximum">
+             <double>90.000000000000000</double>
+            </property>
+            <property name="value">
+             <double>60.000000000000000</double>
+            </property>
+            <property name="SlicerParameterName" stdset="0">
+             <string>maximumTurnAngle</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0">
+           <widget class="QLabel" name="maxAttemptsLabel">
+            <property name="text">
+             <string>Maximum number of attempts per cylinder</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QSpinBox" name="maxNumberOfAttempts">
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>99999999</number>
+            </property>
+            <property name="value">
+             <number>1000</number>
+            </property>
+            <property name="SlicerParameterName" stdset="0">
+             <string>maxNumberOfAttempts</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="0">
+           <widget class="QLabel" name="maximumNumberOfCylinderLabel">
+            <property name="text">
+             <string>Maximum number of cylinder to find</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="1">
+           <widget class="QSpinBox" name="maxNumberOfCylinders">
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>99999999</number>
+            </property>
+            <property name="value">
+             <number>1000</number>
+            </property>
+            <property name="SlicerParameterName" stdset="0">
+             <string>maxNumberOfCylinders</string>
+            </property>
+           </widget>
+          </item>
           <item row="2" column="1">
-           <widget class="ctkSliderWidget" name="thresholdSliderWidget">
+           <widget class="ctkSliderWidget" name="percentThreshold">
             <property name="toolTip">
              <string>Select the threshold for which a point is considered inlier. X % of previous cylinder radius.</string>
             </property>
@@ -221,49 +347,19 @@
             </property>
            </widget>
           </item>
-          <item row="5" column="0">
-           <widget class="QLabel" name="startingRadiusLabel">
-            <property name="text">
-             <string>Starting Radius (mm)</string>
-            </property>
-           </widget>
-          </item>
-          <item row="5" column="1">
-           <widget class="QDoubleSpinBox" name="startingRadiusDoubleSpinBox">
+          <item row="1" column="1">
+           <widget class="ctkSliderWidget" name="inlierPoints">
             <property name="toolTip">
-             <string>Select the radius of the starting cylinder radius in millimeter.</string>
+             <string>Select a percentage of inlier points to consider a cylinder valid.</string>
             </property>
             <property name="maximum">
              <double>100.000000000000000</double>
             </property>
-            <property name="singleStep">
-             <double>0.100000000000000</double>
+            <property name="value">
+             <double>60.000000000000000</double>
             </property>
             <property name="SlicerParameterName" stdset="0">
-             <string>startingRadius</string>
-            </property>
-           </widget>
-          </item>
-          <item row="7" column="0">
-           <widget class="QLabel" name="label_9">
-            <property name="text">
-             <string>Centerline Resolution (mm)</string>
-            </property>
-           </widget>
-          </item>
-          <item row="7" column="1">
-           <widget class="ctkDoubleSpinBox" name="centerlineResolutionDoubleSpinBox">
-            <property name="toolTip">
-             <string>Maximum distance allowed between centerline points, if two points are too far, points inbetween are interpolated and resampled.</string>
-            </property>
-            <property name="minimum">
-             <double>0.010000000000000</double>
-            </property>
-            <property name="maximum">
-             <double>99999.000000000000000</double>
-            </property>
-            <property name="value">
-             <double>5.000000000000000</double>
+             <string>percentInlierPoints</string>
             </property>
            </widget>
           </item>
@@ -316,7 +412,7 @@
        <item>
         <layout class="QFormLayout" name="curveOptionsLayout">
          <item row="0" column="0">
-          <widget class="QLabel" name="label_4">
+          <widget class="QLabel" name="centerlineTextSizeLabel">
            <property name="text">
             <string>Centerline Text Size</string>
            </property>
@@ -409,14 +505,14 @@
          </property>
          <layout class="QFormLayout" name="formLayout_3">
           <item row="0" column="0">
-           <widget class="QLabel" name="label_5">
+           <widget class="QLabel" name="reductionFactorLabel">
             <property name="text">
              <string>Reduction Factor</string>
             </property>
            </widget>
           </item>
           <item row="0" column="1">
-           <widget class="ctkSliderWidget" name="reductionFactorSlider">
+           <widget class="ctkSliderWidget" name="reductionFactor">
             <property name="toolTip">
              <string>Reduction for vessels which radius is greater than the threshold value.</string>
             </property>
@@ -432,10 +528,13 @@
             <property name="value">
              <double>0.750000000000000</double>
             </property>
+            <property name="SlicerParameterName" stdset="0">
+             <string>reductionFactor</string>
+            </property>
            </widget>
           </item>
           <item row="1" column="0">
-           <widget class="QLabel" name="label_7">
+           <widget class="QLabel" name="radiusLoweringThresholdLabel">
             <property name="text">
              <string>Radius Lowering Threshold (mm)</string>
             </property>
@@ -455,17 +554,20 @@
             <property name="value">
              <double>5.000000000000000</double>
             </property>
+            <property name="SlicerParameterName" stdset="0">
+             <string>reductionThreshold</string>
+            </property>
            </widget>
           </item>
           <item row="2" column="0">
-           <widget class="QLabel" name="label_6">
+           <widget class="QLabel" name="distanceOfContourRegionLabel">
             <property name="text">
              <string>Distance of Contour Region (voxel)</string>
             </property>
            </widget>
           </item>
           <item row="2" column="1">
-           <widget class="QSpinBox" name="contourSpinbox">
+           <widget class="QSpinBox" name="contourDistance">
             <property name="toolTip">
              <string>Distance between the edges of the vessels and the vessel contours.</string>
             </property>
@@ -481,13 +583,20 @@
             <property name="displayIntegerBase">
              <number>10</number>
             </property>
+            <property name="SlicerParameterName" stdset="0">
+             <string>contourDistance</string>
+            </property>
            </widget>
           </item>
           <item row="3" column="1">
-           <widget class="ctkCheckBox" name="mergeAllVesselsCheckBox"/>
+           <widget class="ctkCheckBox" name="mergeAllVesselsCheck">
+            <property name="SlicerParameterName" stdset="0">
+             <string>mergeAllVessels</string>
+            </property>
+           </widget>
           </item>
           <item row="3" column="0">
-           <widget class="QLabel" name="label_8">
+           <widget class="QLabel" name="mergeAllVesselsLabel">
             <property name="text">
              <string>Merge all vessels into a single segment</string>
             </property>
@@ -610,7 +719,7 @@
   <connection>
    <sender>pulmonary_arteries_segmentor_module</sender>
    <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
-   <receiver>startingPointSelector</receiver>
+   <receiver>directionPointListLabel</receiver>
    <slot>setMRMLScene(vtkMRMLScene*)</slot>
    <hints>
     <hint type="sourcelabel">

@@ -8,6 +8,7 @@ import slicer
 import slicer.util
 import vtk
 import json
+from math import radians
 
 from slicer import vtkMRMLScalarVolumeNode, vtkMRMLMarkupsFiducialNode
 from slicer.ScriptedLoadableModule import (
@@ -21,7 +22,13 @@ from slicer.parameterNodeWrapper import (
     WithinRange,
 )
 from slicer.util import VTKObservationMixin
-from vtkSlicerMarkupsModuleMRMLPython import vtkMRMLMarkupsNode
+
+try:
+    # Import path working for Slicer 5.6.1
+    from vtkSlicerMarkupsModuleMRMLPython import vtkMRMLMarkupsNode
+except ImportError:
+    # Import path working for Slicer 5.9.0
+    from slicer import vtkMRMLMarkupsNode
 
 # Recursive reload, when you hit the "reload" button in 3D slicer, force all submodules to be reloaded (which is not the case by default).
 try:
@@ -40,7 +47,7 @@ from ransac_slicer.popup_utils import (
     CustomProgressBar,
     CustomStatusDialog,
 )
-from ransac_slicer.volume import volume
+from ransac_slicer.volume import Volume
 from ransac_slicer.region_growing_seeds import paint_segments
 
 from networkx.readwrite import json_graph
@@ -61,12 +68,12 @@ class pulmonary_arteries_segmentor_module(ScriptedLoadableModule):
         self.parent.title = "Pulmonary Arteries Segmentor"
         self.parent.categories = ["Segmentation"]
         self.parent.dependencies = []
-        self.parent.contributors = ["Azéline Aillet", "Gabriel Jacquinot"]
+        self.parent.contributors = ["Azéline Aillet", "Gabriel Husak"]
         self.parent.helpText = """
 A 3D Slicer plugin for pulmonary artery extraction from angiography images.
 """
         self.parent.acknowledgementText = """
-This plugin is an end-of-study project, made by Azéline Aillet (Student at EPITA) and Gabriel Jacquinot (Student at EPITA), under the direction of Odyssée Merveille (CREATIS) and Morgane Des Ligneris (CREATIS).
+This plugin is an end-of-study project, made by Azéline Aillet (Student at EPITA) and Gabriel Husak (Student at EPITA), under the direction of Odyssée Merveille (CREATIS) and Morgane Des Ligneris (CREATIS).
 The RANSAC code is based on the previous work of Jack CARBONERO (CReSTIC), Guillaume DOLLE (LMR) and Nicolas PASSAT (CReSTIC) on the plugin vestract.
 The hierarchy code is based on the work of Lucie Macron (Kitware SAS), Thibault Pelletier (Kitware SAS), Camille Huet (Kitware SAS), Leo Sanchez (Kitware SAS) from the RVesselX plugin.
 """
@@ -80,7 +87,7 @@ The hierarchy code is based on the work of Lucie Macron (Kitware SAS), Thibault 
 @parameterNodeWrapper
 class pulmonary_arteries_segmentor_moduleParameterNode:
     """
-    Class to wrap the inputs of the RANSAC algorithm, the fields are automaticaly updated.
+    Class to wrap the inputs of the plugin's interface, the fields are automaticaly updated.
 
     Fields
     ----------
@@ -88,18 +95,38 @@ class pulmonary_arteries_segmentor_moduleParameterNode:
     inputVolume: input volume to extract the arteries from.
     startingPoint: starting point list for RANSAC cylinders.
     directionPoint: direction point list for RANSAC cylinders.
+
+    startingRadius: initiale radius of the first cylinder to fit.
+    centerlineResolution: maximum allowed distance between to point on the tracked centerline.
+
     percentInlierPoints: percentage of inlier points to validate a cylinder.
     percentThreshold: percentage of last cylinders radius to make a point inlier of a cylinder.
-    startingRadius: initiale radius of the first cylinder to fit
+    maximumTurnAngle: the maximum possible angle between two consecutive cylinder
+    maxNumberOfAttempts: the maximum amount of candidate cylinder to test
+    maxNumberOfCylinders: the maximum amount of cylinder tracked in one branch
     """
 
-    # Begin tab
+    # Input tab
     inputVolume: vtkMRMLScalarVolumeNode
     startingPoint: vtkMRMLMarkupsFiducialNode
     directionPoint: vtkMRMLMarkupsFiducialNode
-    percentInlierPoints: Annotated[float, WithinRange(0, 100)] = 60.0
-    percentThreshold: Annotated[float, WithinRange(0, 100)] = 30.0
-    startingRadius: Annotated[float, WithinRange(0, 100)] = 0.0
+
+    # Simple Ransac paramaters
+    startingRadius: Annotated[float, WithinRange(0.1, 1000.0)] = 1.0
+    centerlineResolution: Annotated[float, WithinRange(0.1, 1000.0)] = 1.0
+
+    # Advanced Ransac paramaters
+    percentInlierPoints: Annotated[float, WithinRange(0.0, 100.0)] = 60.0
+    percentThreshold: Annotated[float, WithinRange(0.0, 100.0)] = 30.0
+    maximumTurnAngle: Annotated[float, WithinRange(0.0, 90.0)] = 60.0
+    maxNumberOfAttempts: Annotated[int, WithinRange(1, 99999999)] = 1000
+    maxNumberOfCylinders: Annotated[int, WithinRange(1, 99999999)] = 1000
+
+    # Segmentation parameters
+    reductionFactor: Annotated[float, WithinRange(0.0, 1.0)] = 0.75
+    reductionThreshold: Annotated[float, WithinRange(0.0, 1000.0)] = 5.0
+    contourDistance: Annotated[int, WithinRange(1, 1000)] = 4
+    mergeAllVessels: bool
 
 
 #
@@ -412,7 +439,13 @@ class pulmonary_arteries_segmentor_moduleWidget(
         if (
             self._parameterNode
             and not self.isPlacingPoints
-            and all(self._getParametersRansac())
+            and all(
+                [
+                    self._parameterNode.inputVolume,
+                    self._parameterNode.startingPoint,
+                    self._parameterNode.directionPoint,
+                ]
+            )
             and starting_point.GetNumberOfControlPoints()
             and direction_point.GetNumberOfControlPoints()
         ):
@@ -620,11 +653,19 @@ class pulmonary_arteries_segmentor_moduleWidget(
                 height=50,
             )
             self.graph_branches = self.logic.processBranch(
-                self._getParametersRansac(),
-                self.ui.centerlineResolutionDoubleSpinBox.value,
-                self.graph_branches,
-                self.ui.createBranch.text == "Create New Branch",
-                progress_dialog,
+                raw_volume=self._parameterNode.inputVolume,
+                starting_point_list=self._parameterNode.startingPoint,
+                direction_point_list=self._parameterNode.directionPoint,
+                percent_inlier_points=self._parameterNode.percentInlierPoints,
+                inlier_threshold=self._parameterNode.percentThreshold,
+                starting_radius=self._parameterNode.startingRadius,
+                centerline_resolution=self._parameterNode.centerlineResolution,
+                maximum_turn_angle=self._parameterNode.maximumTurnAngle,
+                max_number_of_attemps=self._parameterNode.maxNumberOfAttempts,
+                max_number_of_cylinders=self._parameterNode.maxNumberOfCylinders,
+                graph_branches=self.graph_branches,
+                isNewBranch=self.ui.createBranch.text == "Create New Branch",
+                progress_dialog=progress_dialog,
             )
 
             self.recenter3dView()
@@ -715,10 +756,10 @@ class pulmonary_arteries_segmentor_moduleWidget(
                 self.graph_branches.centerline_radius,
                 branch_draw_order,
                 self.segmentationNode,
-                self.ui.reductionFactorSlider.value,
-                self.ui.reductionThreshold.value,
-                self.ui.contourSpinbox.value,
-                self.ui.mergeAllVesselsCheckBox.checked,
+                self._parameterNode.reductionFactor,
+                self._parameterNode.reductionThreshold,
+                self._parameterNode.contourDistance,
+                self._parameterNode.mergeAllVessels,
             )
 
             # Set the current segmentation into the UI
@@ -880,8 +921,16 @@ class pulmonary_arteries_segmentor_moduleLogic(ScriptedLoadableModuleLogic):
 
     def processBranch(
         self,
-        parameters: list,
+        raw_volume: vtkMRMLScalarVolumeNode,
+        starting_point_list: vtkMRMLMarkupsFiducialNode,
+        direction_point_list: vtkMRMLMarkupsFiducialNode,
+        percent_inlier_points: float,
+        inlier_threshold: float,
+        starting_radius: float,
         centerline_resolution: float,
+        maximum_turn_angle: float,
+        max_number_of_attemps: int,
+        max_number_of_cylinders: int,
         graph_branches: GraphBranches,
         isNewBranch: bool,
         progress_dialog: CustomStatusDialog,
@@ -904,37 +953,43 @@ class pulmonary_arteries_segmentor_moduleLogic(ScriptedLoadableModuleLogic):
         GraphBranches
         Updated graph
         """
-        vol = slicer.util.array(parameters[0].GetID())
+        # volume, starting_point, direction_point, percent_inlier_points, inlier_threshold, starting_radius
+        vol = slicer.util.array(raw_volume.GetID())
         vol = vol.swapaxes(0, 2)
 
         ijk_to_ras = vtk.vtkMatrix4x4()
-        parameters[0].GetIJKToRASMatrix(ijk_to_ras)
+        raw_volume.GetIJKToRASMatrix(ijk_to_ras)
         np_ijk_to_ras = np.zeros(shape=(4, 4))
         ijk_to_ras.DeepCopy(np_ijk_to_ras.ravel(), ijk_to_ras)
 
-        vol = volume(vol, np_ijk_to_ras)
+        vol = Volume(vol, np_ijk_to_ras)
 
         starting_point = np.array([0, 0, 0])
-        parameters[1].GetNthControlPointPosition(
-            parameters[1].GetNumberOfControlPoints() - 1, starting_point
+        starting_point_list.GetNthControlPointPosition(
+            starting_point_list.GetNumberOfControlPoints() - 1, starting_point
         )
 
         direction_point = np.array([0, 0, 0])
-        parameters[2].GetNthControlPointPosition(
-            parameters[2].GetNumberOfControlPoints() - 1, direction_point
+        direction_point_list.GetNthControlPointPosition(
+            direction_point_list.GetNumberOfControlPoints() - 1, direction_point
         )
 
+        radians_angle = radians(maximum_turn_angle)
+
         graph_branches = run_ransac(
-            vol,
-            starting_point,
-            direction_point,
-            parameters[5],
-            parameters[3],
-            parameters[4],
-            centerline_resolution,
-            graph_branches,
-            isNewBranch,
-            progress_dialog,
+            vol=vol,
+            starting_point=starting_point,
+            direction_point=direction_point,
+            starting_radius=starting_radius,
+            percent_inlier_points=percent_inlier_points,
+            inlier_threshold=inlier_threshold,
+            centerline_resolution=centerline_resolution,
+            maximum_turn_angle=radians_angle,
+            max_number_of_attempts=max_number_of_attemps,
+            max_number_of_cylinders=max_number_of_cylinders,
+            graph_branches=graph_branches,
+            isNewBranch=isNewBranch,
+            progress_dialog=progress_dialog,
         )
 
         return graph_branches

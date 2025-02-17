@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>623</width>
+    <width>483</width>
     <height>871</height>
    </rect>
   </property>
@@ -75,14 +75,14 @@
            </widget>
           </item>
           <item row="2" column="0">
-           <widget class="QLabel" name="label_3">
+           <widget class="QLabel" name="directionLabel">
             <property name="text">
              <string>Direction Point List</string>
             </property>
            </widget>
           </item>
           <item row="1" column="1">
-           <widget class="qMRMLNodeComboBox" name="directionPointListLabel">
+           <widget class="qMRMLNodeComboBox" name="startingPointSelector">
             <property name="toolTip">
              <string>Select a starting point for the first cylinder.</string>
             </property>
@@ -153,6 +153,34 @@
             </property>
            </widget>
           </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="measureLabel">
+            <property name="text">
+             <string>Measuring List</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="qMRMLNodeComboBox" name="measureDistance">
+            <property name="nodeTypes">
+             <stringlist>
+              <string>vtkMRMLMarkupsLineNode</string>
+             </stringlist>
+            </property>
+            <property name="hideChildNodeTypes">
+             <stringlist notr="true"/>
+            </property>
+            <property name="baseName">
+             <string>distance</string>
+            </property>
+            <property name="interactionNodeSingletonTag">
+             <string notr="true"/>
+            </property>
+            <property name="SlicerParameterName" stdset="0">
+             <string>measureDistance</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -165,27 +193,14 @@
           <bool>false</bool>
          </property>
          <layout class="QFormLayout" name="formLayout_2">
-          <item row="0" column="0" colspan="2">
-           <widget class="QPushButton" name="placePointButton">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="toolTip">
-             <string>Start a new placing phase for starting and direction points.</string>
-            </property>
-            <property name="text">
-             <string>Place a new starting and direction point</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
+          <item row="3" column="0">
            <widget class="QLabel" name="startingRadiusLabel">
             <property name="text">
              <string>Starting Radius (mm)</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="1">
+          <item row="3" column="1">
            <widget class="QDoubleSpinBox" name="startingRadius">
             <property name="toolTip">
              <string>Select the radius of the starting cylinder radius in millimeter.</string>
@@ -207,14 +222,14 @@
             </property>
            </widget>
           </item>
-          <item row="3" column="0">
+          <item row="5" column="0">
            <widget class="QLabel" name="centerlineResolutioLabel">
             <property name="text">
              <string>Centerline Resolution (mm)</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="1">
+          <item row="5" column="1">
            <widget class="QDoubleSpinBox" name="centerlineResolution">
             <property name="minimum">
              <double>0.010000000000000</double>
@@ -230,14 +245,14 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="0">
+          <item row="4" column="0">
            <widget class="QLabel" name="trackedLabel">
             <property name="text">
              <string>Use Last Tacked Radius</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="1">
+          <item row="4" column="1">
            <widget class="QCheckBox" name="useLastTrackedRadius">
             <property name="enabled">
              <bool>false</bool>
@@ -247,6 +262,29 @@
             </property>
             <property name="SlicerParameterName" stdset="0">
              <string>useLastTrackedRadius</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QPushButton" name="placePointButton">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="toolTip">
+             <string>Start a new placing phase for starting and direction points.</string>
+            </property>
+            <property name="text">
+             <string>Place a new starting and direction point</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QPushButton" name="measureRadiusButton">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>Measure Radius</string>
             </property>
            </widget>
           </item>
@@ -750,7 +788,9 @@
   <tabstop>inputsCollapsibleButton</tabstop>
   <tabstop>configurationCollapsibleButton</tabstop>
   <tabstop>placePointButton</tabstop>
+  <tabstop>measureRadiusButton</tabstop>
   <tabstop>startingRadius</tabstop>
+  <tabstop>useLastTrackedRadius</tabstop>
   <tabstop>centerlineResolution</tabstop>
   <tabstop>advancedOptionCollpasibleButton</tabstop>
   <tabstop>inlierPoints</tabstop>
@@ -795,7 +835,7 @@
   <connection>
    <sender>pulmonary_arteries_segmentor_module</sender>
    <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
-   <receiver>directionPointListLabel</receiver>
+   <receiver>startingPointSelector</receiver>
    <slot>setMRMLScene(vtkMRMLScene*)</slot>
    <hints>
     <hint type="sourcelabel">
@@ -837,6 +877,22 @@
     <hint type="destinationlabel">
      <x>708</x>
      <y>234</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pulmonary_arteries_segmentor_module</sender>
+   <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
+   <receiver>measureDistance</receiver>
+   <slot>setMRMLScene(vtkMRMLScene*)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>311</x>
+     <y>435</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>370</x>
+     <y>175</y>
     </hint>
    </hints>
   </connection>

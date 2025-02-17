@@ -11,7 +11,11 @@ import vtk
 import json
 from math import radians
 
-from slicer import vtkMRMLScalarVolumeNode, vtkMRMLMarkupsFiducialNode
+from slicer import (
+    vtkMRMLScalarVolumeNode,
+    vtkMRMLMarkupsFiducialNode,
+    vtkMRMLMarkupsLineNode,
+)
 from slicer.ScriptedLoadableModule import (
     ScriptedLoadableModuleWidget,
     ScriptedLoadableModuleLogic,
@@ -50,6 +54,7 @@ from ransac_slicer.popup_utils import (
 )
 from ransac_slicer.volume import Volume
 from ransac_slicer.region_growing_seeds import paint_segments
+from ransac_slicer.jit_compiled_functions import numba_close
 
 from networkx.readwrite import json_graph
 import networkx as nx
@@ -114,6 +119,7 @@ class pulmonary_arteries_segmentor_moduleParameterNode:
     inputVolume: vtkMRMLScalarVolumeNode
     startingPoint: vtkMRMLMarkupsFiducialNode
     directionPoint: vtkMRMLMarkupsFiducialNode
+    measureDistance: vtkMRMLMarkupsLineNode
 
     # Simple Ransac paramaters
     startingRadius: Annotated[float, WithinRange(0.1, 1000.0)] = 10.0
@@ -230,6 +236,7 @@ class pulmonary_arteries_segmentor_moduleWidget(
 
         # Buttons callbacks
         self.ui.placePointButton.connect("clicked(bool)", self.startPlacePointProcedure)
+        self.ui.measureRadiusButton.connect("clicked(bool)", self.measure)
 
         self.ui.createBranch.connect("clicked(bool)", self.create_branch)
         self.ui.clearTree.connect(
@@ -267,6 +274,7 @@ class pulmonary_arteries_segmentor_moduleWidget(
         # Make sure parameter node is initialized (needed for module reload)
         self.initializeParameterNode()
         self.checkCanPlacePoint()
+        self.checkCanMeasure()
 
     def cleanup(self) -> None:
         """
@@ -346,6 +354,16 @@ class pulmonary_arteries_segmentor_moduleWidget(
             node.GetDisplayNode().SetSelectedColor(*direction_points_color)
             self._parameterNode.directionPoint = node
 
+        # Create a line to measure diameters if it does not already exist
+        if not self._parameterNode.measureDistance:
+            node = slicer.util.getFirstNodeByClassByName(
+                "vtkMRMLMarkupsLineNode", "distance"
+            )
+            if node is None or not isinstance(node, slicer.vtkMRMLMarkupsLineNode):
+                node = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsLineNode")
+                node.SetName("distance")
+            self._parameterNode.measureDistance = node
+
     def setParameterNode(
         self,
         inputParameterNode: Optional[pulmonary_arteries_segmentor_moduleParameterNode],
@@ -381,6 +399,11 @@ class pulmonary_arteries_segmentor_moduleWidget(
                 self._parameterNode,
                 vtk.vtkCommand.ModifiedEvent,
                 self.checkCanPlacePoint,
+            )
+            self.addObserver(
+                self._parameterNode,
+                vtk.vtkCommand.ModifiedEvent,
+                self.checkCanMeasure,
             )
             self._checkCanStartRansac()
 
@@ -484,11 +507,22 @@ class pulmonary_arteries_segmentor_moduleWidget(
         """
         Enables the place button if the starting and direction point parameters exist.
         """
-        self.ui.placePointButton.enabled = (
-            self._parameterNode.startingPoint and self._parameterNode.directionPoint
+        id_starting = (
+            self._parameterNode.startingPoint.GetID()
+            if self._parameterNode.startingPoint
+            else None
+        )
+        id_direction = (
+            self._parameterNode.directionPoint.GetID()
+            if self._parameterNode.directionPoint
+            else None
         )
 
-    def startPlacePointProcedure(self):
+        self.ui.placePointButton.enabled = (
+            id_starting and id_direction and (id_starting != id_direction)
+        )
+
+    def startPlacePointProcedure(self, *args):
         """
         Start a point placement procedure.
 
@@ -638,6 +672,61 @@ class pulmonary_arteries_segmentor_moduleWidget(
 
         self.startingPointPlaced = False
         self.directionPointPlaced = False
+
+    def checkCanMeasure(self, *args):
+        self.ui.measureRadiusButton.enabled = (
+            self._parameterNode.measureDistance is not None
+        )
+
+    def measure(self, *args):
+        measuring_node = self._parameterNode.measureDistance
+
+        if not measuring_node:
+            return
+
+        measuring_node.RemoveAllControlPoints()
+
+        self._addObserver(
+            measuring_node,
+            vtkMRMLMarkupsNode.PointPositionDefinedEvent,
+            self.measureNodePlaced,
+        )
+        self._addObserver(
+            measuring_node,
+            vtkMRMLMarkupsNode.PointRemovedEvent,
+            self.measureNodeRemoved,
+        )
+
+        selectionNode = slicer.app.applicationLogic().GetSelectionNode()
+        selectionNode.SetReferenceActivePlaceNodeClassName("vtkMRMLMarkupsLineNode")
+        selectionNode.SetActivePlaceNodeID(measuring_node.GetID())
+
+        interactionNode = slicer.app.applicationLogic().GetInteractionNode()
+        interactionNode.SetCurrentInteractionMode(slicer.vtkMRMLInteractionNode.Place)
+
+        slicer.app.applicationLogic().GetSelectionNode().SetActivePlaceNodeID(
+            measuring_node.GetID()
+        )
+
+    def measureNodePlaced(self, *args):
+        measuring_node = self._parameterNode.measureDistance
+
+        if not measuring_node:
+            return
+
+        if measuring_node.GetNumberOfControlPoints() == 2:
+            distance = measuring_node.GetLineLengthWorld()
+            if numba_close(distance, 0):
+                distance = 0.1
+            self._parameterNode.startingRadius = distance
+
+    def measureNodeRemoved(self, *args):
+        measuring_node = self._parameterNode.measureDistance
+
+        if not measuring_node:
+            return
+
+        measuring_node.RemoveAllControlPoints()
 
     def recenter3dView(self) -> None:
         """

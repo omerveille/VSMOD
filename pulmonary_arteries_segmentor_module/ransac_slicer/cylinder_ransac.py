@@ -1,6 +1,8 @@
 import numpy as np
 import math
 
+from .jit_compiled_functions import numba_close, numba_fit_cylinder_ransac
+
 from .popup_utils import CustomStatusDialog
 
 from .volume import Volume
@@ -89,17 +91,12 @@ class config:
         """
         Set nb_test_min to n
         Clamped to [0,+infinity).
-        Also set nb_test_max to n if nb_test_max < n, to ensure that
-        nb_test_min <= nb_test_max
 
         Args:
             n (int): New min number of RANSAC tests
         """
 
         self._nb_test_min = n if n > 0 else 0
-
-        if not hasattr(self, "_nb_test_max") or n > self._nb_test_max:
-            self._nb_test_max = n
 
     @property
     def nb_test_max(self):
@@ -115,17 +112,14 @@ class config:
     @nb_test_max.setter
     def nb_test_max(self, n):
         """
-        Set nb_test_max to n. Clamped to [0,+infinity)
-        Also set nb_test_min to n if nb_test_min > n, to ensure that nb_test_min <= nb_test_max
+        Set nb_test_max to n
+        Clamped to [0,+infinity).
 
         Args:
             n (int): New max number of RANSAC tests
         """
 
         self._nb_test_max = n if n > 0 else 0
-
-        if not hasattr(self, "_nb_test_min") or n < self._nb_test_min:
-            self._nb_test_min = n
 
     @property
     def pct_inl(self):
@@ -642,6 +636,102 @@ def sample_around_cylinder(vol, cyl, cfg):
     return i_max
 
 
+def numba_sample_around_cylinder(vol, cyl, cfg):
+    """
+    Compute the current cylinder inliers without moving the cylinder center.
+    For more details about the process involved, please refer to the next_cylinder function,
+    since this function is a cheaper version of it.
+
+    Args:
+        vol (volume): Input volume
+        cyl (cylinder): Current cylinder
+        cfg (config): Tracking configuration
+
+    Returns:
+        np.array(dtype=np.float64): Current cylinder's inlier point set
+    """
+
+    order = vol.order
+    vol.order = 3
+
+    current_center = cyl.center
+
+    r_min = cyl.radius * cfg.r_min
+    r_max = cyl.radius * cfg.r_max
+    ray_len = cyl.radius * cfg.ray_len
+    err_threshold = cyl.radius * cfg.threshold
+
+    p = sample(vol, current_center, ray_len, cfg.n_samples, cfg.ray_dir_set)
+    vol.order = order
+    p = filter_points(p, current_center, 0.1 * ray_len, 0.9 * ray_len)
+
+    if p.shape[0] < 3:
+        return None
+
+    idx = np.argsort(-np.abs(cyl.direction @ cfg.cyl_dir_set.T))
+
+    p_max = 0
+    c_max = cylinder.cylinder()
+    i_max = np.empty((0, 3))
+
+    for axis in cfg.cyl_dir_set[idx]:
+        if np.abs(cyl.direction @ axis) < np.cos(cfg.a_max):
+            continue
+
+        c_basis, inliers, p_inl = numba_fit_cylinder_ransac(
+            p,
+            axis,
+            cfg.nb_test_min,
+            cfg.nb_test_max,
+            cfg.pct_inl,
+            r_min,
+            r_max,
+            err_threshold,
+        )
+        if numba_close(p_inl, 0.0):
+            return None, None
+
+        c = cylinder.fit_3_points(c_basis[0], c_basis[1], c_basis[2], axis)
+
+        if p_inl > cfg.pct_inl:
+            p_max = p_inl
+            c_max = c
+            i_max = inliers
+            break
+
+        elif p_inl > cfg.pct_inl / 2 and p_max < p_inl:
+            p_max = p_inl
+            c_max = c
+            i_max = inliers
+
+    if i_max.shape[0] < 3:
+        return None
+
+    r_min = c_max.radius * cfg.r_min
+    r_max = c_max.radius * cfg.r_max
+    ray_len = c_max.radius * cfg.ray_len
+    err_threshold = c_max.radius * cfg.threshold
+
+    i_max = c_max.select_inliers(p, err_threshold)
+
+    if i_max.shape[0] < 3:
+        return None
+
+    i_max = c_max.fix_height(i_max)
+    c_max.refine(i_max)
+    i_max = c_max.select_inliers(p, err_threshold)
+
+    if i_max.shape[0] < 3:
+        return None
+
+    if c_max.direction @ cyl.direction < 0:
+        c_max.direction = -c_max.direction
+
+    i_max = c_max.fix_height(i_max)
+
+    return i_max
+
+
 def next_cylinder(vol, cyl, cfg):
     """
     Compute next cylinder
@@ -796,6 +886,163 @@ def next_cylinder(vol, cyl, cfg):
     return None, None
 
 
+def numba_next_cylinder(vol, cyl, cfg):
+    """
+    Compute next cylinder
+
+    Args:
+        vol (volume): Input volume
+        cyl (cylinder): Current cylinder
+        cfg (config): Tracking configuration
+
+    Returns:
+        cylinder: Next cylinder
+        np.array(dtype=np.float64): Next cylinder's inlier point set
+    """
+
+    # Make sure 3rd order interpolation is used
+    order = vol.order
+    vol.order = 3
+
+    # We try with original cfg.advance_ratio, and if it fails, try again with 2*cfg.advance_ratio (typical case when
+    # the artery is highly curved)
+    for li in [1, 2]:
+        # Compute guess for next cylinder center: advance from current one by cfg.advance_ratio times its height along
+        # direction li is here in case the original advance_ratio (0.5 by default) was not large enough to ensure
+        # sufficient progress in the tracking
+        next_center = cyl.center + li * cfg.advance_ratio * cyl.height * cyl.direction
+
+        # Sets some parameters from cfg
+        r_min = cyl.radius * cfg.r_min
+        r_max = cyl.radius * cfg.r_max
+        ray_len = cyl.radius * cfg.ray_len
+        err_threshold = cyl.radius * cfg.threshold
+
+        # Extract points. Remove (filter out) points at both extremities because the 3rd order interpolation might
+        # provide tainted gradient values
+        p = sample(vol, next_center, ray_len, cfg.n_samples, cfg.ray_dir_set)
+        p = filter_points(p, next_center, 0.1 * ray_len, 0.9 * ray_len)
+
+        # Stop if less than 3 points remain after filtering
+        if p.shape[0] < 3:
+            return None, None
+
+        # Sort cylinder directions starting with the one most aligned with cyl.direction
+        idx = np.argsort(-np.abs(cyl.direction @ cfg.cyl_dir_set.T))
+
+        # Look for best cylinder:
+        #   - review axes in idx-based order
+        #   - as soon as a cylinder is found with more than cfg.pct_inl inlier rate, keep it and stop searching -
+        #     otherwise list cylinders with an inlier rate larger than cfg.pct_inl/2:
+        #       the cylinder with the best inlier rate will be kept, if any
+        p_max = 0
+        c_max = cylinder.cylinder()
+        i_max = np.empty((0, 3))
+
+        for axis in cfg.cyl_dir_set[idx]:
+            if np.abs(cyl.direction @ axis) < np.cos(cfg.a_max):
+                continue
+
+            c_basis, inliers, p_inl = numba_fit_cylinder_ransac(
+                p,
+                axis,
+                cfg.nb_test_min,
+                cfg.nb_test_max,
+                cfg.pct_inl,
+                r_min,
+                r_max,
+                err_threshold,
+            )
+            if numba_close(p_inl, 0.0):
+                return None, None
+
+            c = cylinder.fit_3_points(c_basis[0], c_basis[1], c_basis[2], axis)
+
+            if p_inl > cfg.pct_inl:
+                p_max = p_inl
+                c_max = c
+                i_max = inliers
+                break
+
+            # Also list cylinder with inlier rate > cfg.pct_inl/2
+            elif p_inl > cfg.pct_inl / 2 and p_max < p_inl:
+                # Update cyl with max inliers
+                p_max = p_inl
+                c_max = c
+                i_max = inliers
+
+        # Need at least 3 points to fit a cylinder.
+        # Else: stop, no valid cylinder was found
+        if i_max.shape[0] < 3:
+            return None, None
+
+        # Now refine the cylinder that was found
+        r_min = c_max.radius * cfg.r_min
+        r_max = c_max.radius * cfg.r_max
+        ray_len = c_max.radius * cfg.ray_len
+        err_threshold = c_max.radius * cfg.threshold
+
+        # Update c_max, with same direction, but recompute points and other parameters
+        # Update center at a median position along axis wrt inliers.
+        c_max.fix_center(i_max)
+
+        # Re-extract and filter points from this new center
+        p = sample(vol, c_max.center, ray_len, cfg.n_samples, cfg.ray_dir_set)
+        p = filter_points(p, c_max.center, 0.1 * ray_len, 0.9 * ray_len)
+
+        # Select the inliers
+        i_max = c_max.select_inliers(p, err_threshold)
+
+        # Need at least 3 points to fit a cylinder. Else: stop
+        if i_max.shape[0] < 3:
+            return None, None
+
+        # Re-update center wrt new inliers
+        c_max.fix_center(i_max)
+
+        # Compute height and keep inscribed inlier points
+        i_max = c_max.fix_height(i_max)
+
+        # Refine cylinder parameters, in particular to smooth its direction that was originally picked with a discrete
+        # set
+        c_max.refine(i_max)
+
+        # Update inlier set according to new cylinder
+        i_max = c_max.select_inliers(p, err_threshold)
+
+        # Need at least 3 points to fit a cylinder. Else: stop
+        if i_max.shape[0] < 3:
+            return None, None
+
+        # Re-update center wrt inliers
+        c_max.fix_center(i_max)
+
+        # Fixes cylinder direction so that it points in the same direction as the tracking advance necessary for next
+        # step (computation of next guess)
+        if c_max.direction @ cyl.direction < 0:
+            c_max.direction = -c_max.direction
+
+        # Fixes height, and select inliers with this height
+        i_max = c_max.fix_height(i_max)
+
+        # Test if a sufficient advance was made.
+        # If not, we might try with a double advance_ratio (initial loop over li)
+        if c_max.radius > 4:
+            c_max.height = c_max.radius
+        dist_centers = np.linalg.norm(c_max.center - cyl.center)
+        if dist_centers >= cyl.height / 2 and (
+            cyl.height == 0 or dist_centers <= cyl.height * 2
+        ):
+            # Restore interpolation order
+            vol.order = order
+            return c_max, i_max
+
+    # No new cylinder was found
+    vol.order = order
+
+    return None, None
+
+
 def track_cylinder(vol, cyl, cfg):
     """
     Generator that tracks cylinders in a volume, starting with an initial guess
@@ -811,7 +1058,7 @@ def track_cylinder(vol, cyl, cfg):
     """
 
     for _ in range(cfg.nb_iter):
-        c_max, i_max = next_cylinder(vol, cyl, cfg)
+        c_max, i_max = numba_next_cylinder(vol, cyl, cfg)
 
         if c_max is not None:
             yield c_max, i_max

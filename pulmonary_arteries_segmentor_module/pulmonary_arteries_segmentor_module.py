@@ -1,5 +1,6 @@
 import importlib
 import sys
+import os
 from typing import Annotated, Optional
 
 import numpy as np
@@ -57,6 +58,9 @@ import networkx as nx
 # pulmonary_arteries_segmentor_module
 #
 
+# Setup the threading layer for parallel parts of the code
+os.environ["NUMBA_THREADING_LAYER"] = "omp"
+
 
 class pulmonary_arteries_segmentor_module(ScriptedLoadableModule):
     """Uses ScriptedLoadableModule base class, available at:
@@ -112,14 +116,16 @@ class pulmonary_arteries_segmentor_moduleParameterNode:
     directionPoint: vtkMRMLMarkupsFiducialNode
 
     # Simple Ransac paramaters
-    startingRadius: Annotated[float, WithinRange(0.1, 1000.0)] = 1.0
-    centerlineResolution: Annotated[float, WithinRange(0.1, 1000.0)] = 1.0
+    startingRadius: Annotated[float, WithinRange(0.1, 1000.0)] = 10.0
+    useLastTrackedRadius: bool
+    centerlineResolution: Annotated[float, WithinRange(0.1, 1000.0)] = 5.0
 
     # Advanced Ransac paramaters
     percentInlierPoints: Annotated[float, WithinRange(0.0, 100.0)] = 60.0
     percentThreshold: Annotated[float, WithinRange(0.0, 100.0)] = 30.0
     maximumTurnAngle: Annotated[float, WithinRange(0.0, 90.0)] = 60.0
-    maxNumberOfAttempts: Annotated[int, WithinRange(1, 99999999)] = 1000
+    minNumberOfAttempts: Annotated[int, WithinRange(0, 99999999)] = 0
+    maxNumberOfAttempts: Annotated[int, WithinRange(0, 99999999)] = 1000
     maxNumberOfCylinders: Annotated[int, WithinRange(1, 99999999)] = 1000
 
     # Segmentation parameters
@@ -453,9 +459,12 @@ class pulmonary_arteries_segmentor_moduleWidget(
             if len(self.graph_branches.names) == 0:
                 self.ui.createBranch.text = "Create Root"
                 self.ui.createBranch.toolTip = "Create Root."
+                self.ui.useLastTrackedRadius.enabled = False
+                self.ui.useLastTrackedRadius.checked = False
             else:
                 self.ui.createBranch.text = "Create New Branch"
                 self.ui.createBranch.toolTip = "Create New Branch."
+                self.ui.useLastTrackedRadius.enabled = True
         else:
             self.ui.createBranch.toolTip = "Select all input before creating branch."
             self.ui.createBranch.enabled = False
@@ -661,8 +670,10 @@ class pulmonary_arteries_segmentor_moduleWidget(
                 starting_radius=self._parameterNode.startingRadius,
                 centerline_resolution=self._parameterNode.centerlineResolution,
                 maximum_turn_angle=self._parameterNode.maximumTurnAngle,
-                max_number_of_attemps=self._parameterNode.maxNumberOfAttempts,
+                min_number_of_attempts=self._parameterNode.minNumberOfAttempts,
+                max_number_of_attempts=self._parameterNode.maxNumberOfAttempts,
                 max_number_of_cylinders=self._parameterNode.maxNumberOfCylinders,
+                use_last_tracked_radius=self._parameterNode.useLastTrackedRadius,
                 graph_branches=self.graph_branches,
                 isNewBranch=self.ui.createBranch.text == "Create New Branch",
                 progress_dialog=progress_dialog,
@@ -929,8 +940,10 @@ class pulmonary_arteries_segmentor_moduleLogic(ScriptedLoadableModuleLogic):
         starting_radius: float,
         centerline_resolution: float,
         maximum_turn_angle: float,
-        max_number_of_attemps: int,
+        min_number_of_attempts: int,
+        max_number_of_attempts: int,
         max_number_of_cylinders: int,
+        use_last_tracked_radius: bool,
         graph_branches: GraphBranches,
         isNewBranch: bool,
         progress_dialog: CustomStatusDialog,
@@ -985,8 +998,10 @@ class pulmonary_arteries_segmentor_moduleLogic(ScriptedLoadableModuleLogic):
             inlier_threshold=inlier_threshold,
             centerline_resolution=centerline_resolution,
             maximum_turn_angle=radians_angle,
-            max_number_of_attempts=max_number_of_attemps,
+            min_number_of_attempts=min_number_of_attempts,
+            max_number_of_attempts=max_number_of_attempts,
             max_number_of_cylinders=max_number_of_cylinders,
+            use_last_tracked_radius=use_last_tracked_radius,
             graph_branches=graph_branches,
             isNewBranch=isNewBranch,
             progress_dialog=progress_dialog,

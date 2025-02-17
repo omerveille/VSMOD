@@ -1,5 +1,38 @@
 import numpy as np
 import trimesh.primitives as tp
+import time
+import json
+from pathlib import Path
+from datetime import datetime
+
+timers = []
+
+
+def time_function(func):
+    """
+    Decorator used to time functions (e.g to do a benchmark).
+    """
+
+    def wrapper(*args, **kwargs):
+        start = time.time()
+        result = func(*args, **kwargs)
+        timers.append((func.__name__, time.time() - start))
+        return result
+
+    return wrapper
+
+
+def flush_timers():
+    """
+    Write timers to disk near slicer executable.
+    """
+    timer_file_path = Path(
+        f"./timers_{datetime.now().strftime('%Y-%m-%d_%H:%M:%S')}.json"
+    )
+    timer_file_path.touch(exist_ok=True)
+    with open(timer_file_path, "w+") as f:
+        json.dump(timers, f, indent=4)
+    timers.clear()
 
 
 def _nv_to_geo_level(nv):
@@ -106,24 +139,3 @@ def homogenize(p):
         return np.append(p, 1)
 
     return np.hstack((p, np.ones((p.shape[0], 1))))
-
-
-def cross(a, b):
-    """
-    Custom cross product to counter poor performance of numpy cross for single vectors
-
-    Args:
-        a (np.array(dtype=np.float64)): 3-arrays
-        b (np.array(dtype=np.float64)): 3-arrays
-
-    Returns:
-        np.array(dtype=np.float64): 3-arrays result
-    """
-
-    return np.array(
-        [
-            a[1] * b[2] - b[1] * a[2],
-            b[0] * a[2] - a[0] * b[2],
-            a[0] * b[1] - b[0] * a[1],
-        ]
-    )

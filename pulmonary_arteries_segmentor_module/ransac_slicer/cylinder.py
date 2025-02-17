@@ -2,7 +2,9 @@ import numpy as np
 import math
 import scipy.optimize as scopt
 
-from .helper import cross, homogenize
+from .jit_compiled_functions import numba_cross
+
+from .helper import homogenize
 from .segment import segment
 
 
@@ -411,7 +413,7 @@ def fit_3_points(p0, p1, p2, direction):
         d21 = q2 - q1
 
         # Direction is with plane (p0,p1,p2)
-        s = np.fabs(cross(d10, d20) @ direction)
+        s = np.fabs(numba_cross(d10, d20) @ direction)
 
         if math.isclose(s, 0):
             return None

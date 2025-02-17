@@ -2,7 +2,7 @@
 from .volume import Volume
 from .popup_utils import CustomProgressBar, CustomStatusDialog
 from .cylinder_ransac import (
-    sample_around_cylinder,
+    numba_sample_around_cylinder,
     track_branch,
     config,
 )
@@ -61,7 +61,7 @@ def interpolate_point(
 
         # Maximum number of interpolation attempt is 5
         while inliers is None and tries < 5:
-            inliers = sample_around_cylinder(vol, cyl, cfg)
+            inliers = numba_sample_around_cylinder(vol, cyl, cfg)
             tries += 1
 
         if inliers is not None:
@@ -140,8 +140,10 @@ def run_ransac(
     inlier_threshold: int,
     centerline_resolution: float,
     maximum_turn_angle: float,
+    min_number_of_attempts: int,
     max_number_of_attempts: int,
     max_number_of_cylinders: int,
+    use_last_tracked_radius: bool,
     graph_branches: GraphBranches,
     isNewBranch: bool,
     progress_dialog: CustomStatusDialog,
@@ -214,7 +216,6 @@ def run_ransac(
         end_contour_point = []
 
     direction_point = direction_point - starting_point
-
     # Tracking configuration
     pct_inl = percent_inlier_points / 100.0
     err = inlier_threshold / 100.0
@@ -222,11 +223,14 @@ def run_ransac(
         percent_inliers=pct_inl,
         threshold=err,
         angle_max=maximum_turn_angle,
+        nb_test_min=min_number_of_attempts,
         nb_test_max=max_number_of_attempts,
         nb_iter=max_number_of_cylinders,
     )
 
     # Initialize tracking
+    if end_center_radius and use_last_tracked_radius:
+        starting_radius = end_center_radius[0]
     cyl = cylinder(starting_point, starting_radius, direction_point, height=0)
 
     # Perform tracking

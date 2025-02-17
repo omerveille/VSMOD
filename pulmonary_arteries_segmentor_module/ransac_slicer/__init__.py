@@ -6,6 +6,16 @@ from importlib.util import find_spec
 from .popup_utils import make_custom_progress_bar
 import slicer
 import math
+from shutil import which
+
+
+def missing_binary_module():
+    # Check for openmp
+    PythonSlicer_path = which("PythonSlicer")
+    command = [PythonSlicer_path, "-m", "pip", "show", "intel-openmp"]
+    proc = slicer.util.launchConsoleProcess(command, useStartupEnvironment=False)
+    proc.wait()
+    return proc.returncode == 1
 
 
 def install_missing_module(modules: list[str | tuple[str, str]]) -> None:
@@ -38,9 +48,19 @@ def install_missing_module(modules: list[str | tuple[str, str]]) -> None:
 
 missing_modules = [
     module
-    for module in ["numpy", "scipy", "trimesh", ("skimage", "scikit-image"), "networkx"]
+    for module in [
+        "numpy",
+        "scipy",
+        "trimesh",
+        ("skimage", "scikit-image"),
+        "networkx",
+        "numba",
+    ]
     if find_spec(module[0] if isinstance(module, tuple) else module) is None
 ]
+
+if missing_binary_module():
+    missing_modules.append("intel-openmp")
 
 if missing_modules:
     with slicer.util.tryWithErrorDisplay(

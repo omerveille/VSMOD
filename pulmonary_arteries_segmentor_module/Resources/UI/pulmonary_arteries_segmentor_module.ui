@@ -207,18 +207,15 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="0">
+          <item row="3" column="0">
            <widget class="QLabel" name="centerlineResolutioLabel">
             <property name="text">
              <string>Centerline Resolution (mm)</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="1">
-           <widget class="ctkDoubleSpinBox" name="centerlineResolution">
-            <property name="toolTip">
-             <string>Maximum distance allowed between centerline points, if two points are too far, points inbetween are interpolated and resampled.</string>
-            </property>
+          <item row="3" column="1">
+           <widget class="QDoubleSpinBox" name="centerlineResolution">
             <property name="minimum">
              <double>0.010000000000000</double>
             </property>
@@ -229,7 +226,27 @@
              <double>5.000000000000000</double>
             </property>
             <property name="SlicerParameterName" stdset="0">
+             <string>centerlineResolution</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="trackedLabel">
+            <property name="text">
+             <string>Use Last Tacked Radius</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QCheckBox" name="useLastTrackedRadius">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
              <string/>
+            </property>
+            <property name="SlicerParameterName" stdset="0">
+             <string>useLastTrackedRadius</string>
             </property>
            </widget>
           </item>
@@ -248,7 +265,7 @@
           <string>Advanced Ransac Configuration</string>
          </property>
          <property name="collapsed">
-          <bool>true</bool>
+          <bool>false</bool>
          </property>
          <layout class="QFormLayout" name="formLayout_4">
           <item row="1" column="0">
@@ -258,10 +275,48 @@
             </property>
            </widget>
           </item>
+          <item row="1" column="1">
+           <widget class="ctkSliderWidget" name="inlierPoints">
+            <property name="focusPolicy">
+             <enum>Qt::TabFocus</enum>
+            </property>
+            <property name="toolTip">
+             <string>Select a percentage of inlier points to consider a cylinder valid.</string>
+            </property>
+            <property name="maximum">
+             <double>100.000000000000000</double>
+            </property>
+            <property name="value">
+             <double>60.000000000000000</double>
+            </property>
+            <property name="SlicerParameterName" stdset="0">
+             <string>percentInlierPoints</string>
+            </property>
+           </widget>
+          </item>
           <item row="2" column="0">
            <widget class="QLabel" name="thresholdLabel">
             <property name="text">
              <string>Threshold (%)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="ctkSliderWidget" name="percentThreshold">
+            <property name="focusPolicy">
+             <enum>Qt::TabFocus</enum>
+            </property>
+            <property name="toolTip">
+             <string>Select the threshold for which a point is considered inlier. X % of previous cylinder radius.</string>
+            </property>
+            <property name="maximum">
+             <double>100.000000000000000</double>
+            </property>
+            <property name="value">
+             <double>30.000000000000000</double>
+            </property>
+            <property name="SlicerParameterName" stdset="0">
+             <string>percentThreshold</string>
             </property>
            </widget>
           </item>
@@ -286,19 +341,42 @@
            </widget>
           </item>
           <item row="4" column="0">
+           <widget class="QLabel" name="minAttemptsLabel">
+            <property name="text">
+             <string>Minimum number of attempts per cylinder</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QSpinBox" name="minNumberOfAttempts">
+            <property name="maximum">
+             <number>99999999</number>
+            </property>
+            <property name="singleStep">
+             <number>1000</number>
+            </property>
+            <property name="SlicerParameterName" stdset="0">
+             <string>minNumberOfAttempts</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="0">
            <widget class="QLabel" name="maxAttemptsLabel">
             <property name="text">
              <string>Maximum number of attempts per cylinder</string>
             </property>
            </widget>
           </item>
-          <item row="4" column="1">
+          <item row="5" column="1">
            <widget class="QSpinBox" name="maxNumberOfAttempts">
             <property name="minimum">
-             <number>1</number>
+             <number>0</number>
             </property>
             <property name="maximum">
              <number>99999999</number>
+            </property>
+            <property name="singleStep">
+             <number>1000</number>
             </property>
             <property name="value">
              <number>1000</number>
@@ -308,14 +386,14 @@
             </property>
            </widget>
           </item>
-          <item row="5" column="0">
+          <item row="6" column="0">
            <widget class="QLabel" name="maximumNumberOfCylinderLabel">
             <property name="text">
              <string>Maximum number of cylinder to find</string>
             </property>
            </widget>
           </item>
-          <item row="5" column="1">
+          <item row="6" column="1">
            <widget class="QSpinBox" name="maxNumberOfCylinders">
             <property name="minimum">
              <number>1</number>
@@ -328,38 +406,6 @@
             </property>
             <property name="SlicerParameterName" stdset="0">
              <string>maxNumberOfCylinders</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="ctkSliderWidget" name="percentThreshold">
-            <property name="toolTip">
-             <string>Select the threshold for which a point is considered inlier. X % of previous cylinder radius.</string>
-            </property>
-            <property name="maximum">
-             <double>100.000000000000000</double>
-            </property>
-            <property name="value">
-             <double>30.000000000000000</double>
-            </property>
-            <property name="SlicerParameterName" stdset="0">
-             <string>percentThreshold</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="ctkSliderWidget" name="inlierPoints">
-            <property name="toolTip">
-             <string>Select a percentage of inlier points to consider a cylinder valid.</string>
-            </property>
-            <property name="maximum">
-             <double>100.000000000000000</double>
-            </property>
-            <property name="value">
-             <double>60.000000000000000</double>
-            </property>
-            <property name="SlicerParameterName" stdset="0">
-             <string>percentInlierPoints</string>
             </property>
            </widget>
           </item>
@@ -420,6 +466,9 @@
          </item>
          <item row="0" column="1">
           <widget class="ctkSliderWidget" name="centerlineTextSize">
+           <property name="focusPolicy">
+            <enum>Qt::TabFocus</enum>
+           </property>
            <property name="toolTip">
             <string>Changes the centerlines text size.</string>
            </property>
@@ -513,6 +562,9 @@
           </item>
           <item row="0" column="1">
            <widget class="ctkSliderWidget" name="reductionFactor">
+            <property name="focusPolicy">
+             <enum>Qt::TabFocus</enum>
+            </property>
             <property name="toolTip">
              <string>Reduction for vessels which radius is greater than the threshold value.</string>
             </property>
@@ -672,11 +724,6 @@
    <container>1</container>
   </customwidget>
   <customwidget>
-   <class>ctkDoubleSpinBox</class>
-   <extends>QWidget</extends>
-   <header>ctkDoubleSpinBox.h</header>
-  </customwidget>
-  <customwidget>
    <class>ctkSliderWidget</class>
    <extends>QWidget</extends>
    <header>ctkSliderWidget.h</header>
@@ -698,6 +745,35 @@
    <header>qMRMLSegmentEditorWidget.h</header>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>tabWidget</tabstop>
+  <tabstop>inputsCollapsibleButton</tabstop>
+  <tabstop>configurationCollapsibleButton</tabstop>
+  <tabstop>placePointButton</tabstop>
+  <tabstop>startingRadius</tabstop>
+  <tabstop>centerlineResolution</tabstop>
+  <tabstop>advancedOptionCollpasibleButton</tabstop>
+  <tabstop>inlierPoints</tabstop>
+  <tabstop>percentThreshold</tabstop>
+  <tabstop>maximumTurnAngle</tabstop>
+  <tabstop>minNumberOfAttempts</tabstop>
+  <tabstop>maxNumberOfAttempts</tabstop>
+  <tabstop>maxNumberOfCylinders</tabstop>
+  <tabstop>createBranch</tabstop>
+  <tabstop>exportTreeButton</tabstop>
+  <tabstop>loadTreeArchitectureButton</tabstop>
+  <tabstop>clearTree</tabstop>
+  <tabstop>centerlineTextSize</tabstop>
+  <tabstop>lockButton</tabstop>
+  <tabstop>showCenterlineButton</tabstop>
+  <tabstop>showContourPointsButton</tabstop>
+  <tabstop>segmentationCollapsibleButton</tabstop>
+  <tabstop>reductionFactor</tabstop>
+  <tabstop>reductionThreshold</tabstop>
+  <tabstop>contourDistance</tabstop>
+  <tabstop>mergeAllVesselsCheck</tabstop>
+  <tabstop>paintButton</tabstop>
+ </tabstops>
  <resources/>
  <connections>
   <connection>

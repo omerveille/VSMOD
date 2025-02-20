@@ -10,7 +10,7 @@ timers = []
 
 def time_function(func):
     """
-    Decorator used to time functions (e.g to do a benchmark).
+    Decorator used to time functions (e.g to do a benchmark of what needs to be optimized).
     """
 
     def wrapper(*args, **kwargs):
@@ -38,7 +38,7 @@ def flush_timers():
 def _nv_to_geo_level(nv):
     """
     Returns the number of subdivisions necessary to go from an icosahedron to a regular polytope with at least nv
-    vertices. Returns 0 is nv <= 12, (in particular if nv <= 0)
+    vertices. Returns 0 if nv <= 12, (in particular if nv <= 0)
 
     Args:
         nv (int): Number of vertices

@@ -5,10 +5,10 @@ import scipy.optimize as scopt
 from .jit_compiled_functions import numba_cross
 
 from .helper import homogenize
-from .segment import segment
+from .segment import Segment
 
 
-class cylinder:
+class Cylinder:
     """
     Class to represent a cylinder
     """
@@ -53,7 +53,7 @@ class cylinder:
             cylinder: Copy of current cylinder
         """
 
-        return cylinder(
+        return Cylinder(
             self.center, self.radius, self.direction, self.height, self.name
         )
 
@@ -202,7 +202,7 @@ class cylinder:
         # Compute distance to segment of length self.height
         if self.height >= 0:
             d = self.height / 2 * self.direction
-            dist_to_axis = segment(self.center - d, self.center + d).distance_sqr(pa)
+            dist_to_axis = Segment(self.center - d, self.center + d).distance_sqr(pa)
 
         # Distance to infinite line
         else:
@@ -286,7 +286,7 @@ class cylinder:
             return np.append(cyl.center, cyl.radius * cyl.direction)
 
         def param_to_cyl(param):
-            return cylinder(
+            return Cylinder(
                 param[:3], np.linalg.norm(param[3:]), param[3:], self.height
             )
 
@@ -324,7 +324,7 @@ class cylinder:
             len(b) >= 2
             and min(
                 [
-                    segment(s.center, e.center).distance_sqr(self.center)
+                    Segment(s.center, e.center).distance_sqr(self.center)
                     for s, e in zip(b[:-1], b[1:])
                 ]
             )
@@ -359,23 +359,23 @@ def from_string(s):
     v = np.fromstring(s, dtype=float, sep=" ")
 
     if len(v) == 0:
-        return cylinder()
+        return Cylinder()
     elif len(v) == 1:
-        return cylinder(center=[v[0], 0, 0])
+        return Cylinder(center=[v[0], 0, 0])
     elif len(v) == 2:
-        return cylinder(center=[v[0], v[1], 0])
+        return Cylinder(center=[v[0], v[1], 0])
     elif len(v) == 3:
-        return cylinder(center=v[0:3])
+        return Cylinder(center=v[0:3])
     elif len(v) == 4:
-        return cylinder(center=v[0:3], radius=v[3])
+        return Cylinder(center=v[0:3], radius=v[3])
     elif len(v) == 5:
-        return cylinder(center=v[0:3], radius=v[3], direction=[v[4], 0, 0])
+        return Cylinder(center=v[0:3], radius=v[3], direction=[v[4], 0, 0])
     elif len(v) == 6:
-        return cylinder(center=v[0:3], radius=v[3], direction=[v[4], v[5], 0])
+        return Cylinder(center=v[0:3], radius=v[3], direction=[v[4], v[5], 0])
     elif len(v) == 7:
-        return cylinder(center=v[0:3], radius=v[3], direction=v[4:7])
+        return Cylinder(center=v[0:3], radius=v[3], direction=v[4:7])
     else:
-        return cylinder(center=v[0:3], radius=v[3], direction=v[4:7], height=v[7])
+        return Cylinder(center=v[0:3], radius=v[3], direction=v[4:7], height=v[7])
 
 
 def fit_3_points(p0, p1, p2, direction):
@@ -432,7 +432,7 @@ def fit_3_points(p0, p1, p2, direction):
     except Exception:
         return None
 
-    return cylinder(center=c, radius=radius, direction=direction)
+    return Cylinder(center=c, radius=radius, direction=direction)
 
 
 def change_frame(in_cyl, t):
@@ -450,7 +450,7 @@ def change_frame(in_cyl, t):
     c = homogenize(in_cyl.center) @ t.T[:, :3]
     d = in_cyl.direction @ t.T[:3, :3]
 
-    return cylinder(
+    return Cylinder(
         center=c,
         radius=in_cyl.radius,
         direction=d,
@@ -502,13 +502,13 @@ def dist_to_branch(p, b):
     cp = b[0].center
     cn = b[1].center
 
-    d_min = segment(cn, cp).distance_sqr(p)
+    d_min = Segment(cn, cp).distance_sqr(p)
     closest = 0
 
     for i, cyl_n in enumerate(b[2:]):
         cp = cn
         cn = cyl_n.center
-        d = segment(cn, cp).distance_sqr(p)
+        d = Segment(cn, cp).distance_sqr(p)
 
         if d < d_min:
             d_min = d

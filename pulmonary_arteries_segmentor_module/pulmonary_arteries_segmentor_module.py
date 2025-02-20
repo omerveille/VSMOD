@@ -1,6 +1,5 @@
 import importlib
 import sys
-import os
 from typing import Annotated, Optional
 
 import numpy as np
@@ -43,7 +42,7 @@ try:
 except Exception as e:
     print(f"Exception occurred while reloading\n{e}")
 
-from ransac_slicer.cylinder import cylinder
+from ransac_slicer.cylinder import Cylinder
 from ransac_slicer.ransac import run_ransac
 from ransac_slicer.graph_branches import GraphBranches
 from ransac_slicer.branch_tree import BranchTree, TreeColumnRole, Icons
@@ -62,9 +61,6 @@ import networkx as nx
 #
 # pulmonary_arteries_segmentor_module
 #
-
-# Setup the threading layer for parallel parts of the code
-os.environ["NUMBA_THREADING_LAYER"] = "omp"
 
 
 class pulmonary_arteries_segmentor_module(ScriptedLoadableModule):
@@ -407,19 +403,6 @@ class pulmonary_arteries_segmentor_moduleWidget(
             )
             self._checkCanStartRansac()
 
-    def _getParametersRansac(self) -> list:
-        """
-        Return parameters of the parameter node as a list.
-        """
-        return [
-            self._parameterNode.inputVolume,
-            self._parameterNode.startingPoint,
-            self._parameterNode.directionPoint,
-            self._parameterNode.percentInlierPoints,
-            self._parameterNode.percentThreshold,
-            self._parameterNode.startingRadius,
-        ]
-
     def _addObserver(self, obj, event, fct):
         """
         Wrapper of addObserver function, does nothing if the observer already exists.
@@ -674,11 +657,19 @@ class pulmonary_arteries_segmentor_moduleWidget(
         self.directionPointPlaced = False
 
     def checkCanMeasure(self, *args):
+        """
+        Enables the measure button if the distance parameter exist.
+        """
         self.ui.measureRadiusButton.enabled = (
             self._parameterNode.measureDistance is not None
         )
 
     def measure(self, *args):
+        """
+        Start a measuring procedure.
+
+        Each function of this procedure are called through observers callbacks.
+        """
         measuring_node = self._parameterNode.measureDistance
 
         if not measuring_node:
@@ -709,6 +700,13 @@ class pulmonary_arteries_segmentor_moduleWidget(
         )
 
     def measureNodePlaced(self, *args):
+        """
+        Callback when a point of the measuring procedure is placed.
+        If both point of the line are placed, enter the measured real world distance between points
+        in the UI radius field.
+
+        Each function of this procedure are called through observers callbacks.
+        """
         measuring_node = self._parameterNode.measureDistance
 
         if not measuring_node:
@@ -717,10 +715,16 @@ class pulmonary_arteries_segmentor_moduleWidget(
         if measuring_node.GetNumberOfControlPoints() == 2:
             distance = measuring_node.GetLineLengthWorld()
             if numba_close(distance, 0):
-                distance = 0.1
-            self._parameterNode.startingRadius = distance
+                distance = 0.2
+            self._parameterNode.startingRadius = distance / 2
 
     def measureNodeRemoved(self, *args):
+        """
+        Callback when a point of the measuring procedure is removed. (eg when we cancel the point placement)
+        In this case we remove all the points of the measuring line.
+
+        Each function of this procedure are called through observers callbacks.
+        """
         measuring_node = self._parameterNode.measureDistance
 
         if not measuring_node:
@@ -948,7 +952,7 @@ class pulmonary_arteries_segmentor_moduleWidget(
             ):
                 # Restoring lists
                 self.graph_branches.branch_list.append(
-                    [cylinder(center=np.array(cp)) for cp in graph[a][b]["centerline"]]
+                    [Cylinder(center=np.array(cp)) for cp in graph[a][b]["centerline"]]
                 )
                 self.graph_branches.names.append(graph[a][b]["name"])
                 self.graph_branches.centerlines.append(
@@ -1042,9 +1046,19 @@ class pulmonary_arteries_segmentor_moduleLogic(ScriptedLoadableModuleLogic):
 
         Parameters
         ----------
-
-        parameters: output of _getParametersRansac function, a list of user input parameters.
-        centerline_resolution: maximum distance allowed between centerline points.
+        raw_volume: Input volume.
+        starting_point_list: Slicer item containing the point defining the beginning of a cylinder (center of the bottom circle).
+        direction_point_list: Slicer item containing the point defining the end of a cylinder (center of the top circle).
+        percent_inlier_points: amount of point tagged as inlier in order to validate that a cylinder is correct.
+        inlier_threshold: threshold from which a point is defined as an inlier of a cylinder or not.
+        starting_radius: radius of the first cylinder from which the tracking starts
+        centerline_resolution: maximum distance allowed between centerline points, later use to decide if we need to refine or not the centerline.
+        maximum_turn_angle: maximum angle a cylinder can deviate from the last one fitted.
+        min_number_of_attempts: the minimum number of attempts done to find a fitting cylinder.
+        max_number_of_attempts: the maximum number of attempts to find a fitting cylinder.
+        max_number_of_cylinders: the maximum number of cylinder tracked in one tracking.
+        use_last_tracked_radius: flag to indicate whether we override the radius value entered with the radius
+            of the closest cylinder of the input cylinder.
         graph_branches: object holding the graph of vessels branches.
         isNewBranch: flag to tell if it is the first branch or not.
         progress_dialog: UI window to inform the user on the state of the branch tracking.

@@ -9,7 +9,7 @@ from datetime import datetime
 import slicer
 import qt
 import os
-from .cylinder import cylinder
+from .cylinder import Cylinder
 from .branch_tree import BranchTree, TreeColumnRole, Icons
 from .color_palettes import centerline_color, contour_points_color
 
@@ -137,7 +137,7 @@ class GraphBranches:
         """
         new_branch_list = []
         for point in centerline:
-            new_branch_list.append(cylinder(center=np.array(point)))
+            new_branch_list.append(Cylinder(center=np.array(point)))
         self.branch_list.append(new_branch_list)
 
         self.edges.append(edge)

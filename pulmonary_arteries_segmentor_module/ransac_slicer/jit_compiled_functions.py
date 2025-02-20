@@ -1,12 +1,15 @@
 from numba.core.typing.templates import signature
 from numba.extending import intrinsic
 import numpy as np
-from numba import njit, prange, types
+from numba import njit, prange, types, config
 
 """
 Make sure to put all the JIT compiled functions in the same file, cache invalidation will fail in the case of
-nested JIT compiled functions in different files. (C.F https://numba.readthedocs.io/en/stable/user/jit.html --> caching)
+nested JIT compiled functions in different files. (C.F https://numba.readthedocs.io/en/stable/user/jit.html#compilation-options --> caching)
 """
+
+# Setup the threading layer for parallel parts of the code
+config.THREADING_LAYER = "omp"
 
 
 @njit(cache=True)
@@ -32,6 +35,19 @@ def numba_random_indices(n):
 
 @intrinsic(cache=True)
 def atomic_xchg(typingctx, ptr, val):
+    """
+    Implementation of an atomic exchange.
+    Atomically swap a value pointed and returns it.
+    More info at https://numba.readthedocs.io/en/stable/extending/high-level.html#implementing-intrinsics.
+
+    Args:
+        typingctx : the context
+        ptr (int64*): the pointer to the value to be exchanged
+        val (int64): the value that will replace the pointed value
+
+        Returns:
+            old (int) : the value pointed by the pointer
+    """
     sig = signature(types.int64, types.CPointer(types.int64), types.int64)
 
     def codegen(context, builder, signature, args):
@@ -45,6 +61,17 @@ def atomic_xchg(typingctx, ptr, val):
 
 @njit
 def atomic_exchange(arr, new_value):
+    """
+    Implementation of an atomic exchange.
+    Atomically swap a value pointed and returns it.
+
+    Args:
+        arr (np.array(dtype=np.int64)): the single value array pointing to the value to be exchanged
+        val (int64) : the value that will replace the pointed value
+
+        Returns:
+            old (int64) : the value pointed by the array's pointer
+    """
     # Convert the array into an array of type CPointer
     ptr = arr.ctypes
     old = atomic_xchg(ptr, new_value)
@@ -137,6 +164,9 @@ def numba_mark_selected_inliers(p, threshold, center, radius, direction):
     Args:
         p (np.array(dtype=np.float64)): Input point set Nx3
         threshold (float): Max distance to the cylinder (absolute value)
+        center (np.array(dtype=np.float64)): The center of the cylinder
+        radius (float): The radius of the cylinder
+        direction (np.array(dtype=np.float64)): the direction in which the cylinder points
 
     Returns:
         (np.array(dtype=bool)): Inlier points selected map
@@ -144,6 +174,27 @@ def numba_mark_selected_inliers(p, threshold, center, radius, direction):
 
     d = np.fabs(numba_distance(p, center, radius, direction))
     return d < threshold
+
+
+@njit(cache=True)
+def numba_filter_points(p, center, r_min, r_max):
+    """
+    Filters points in p to only keep those that at least at r_min distance from center and at most r_max distance from
+    center (r_min and r_max excluded)
+
+    Args:
+        p (np.array(dtype=np.float64)): Points to filter, as a Nx3 array
+        center (np.array(dtype=np.float64)): Reference point to compute distances from
+        r_min (float): Only points with ]r_min,r_max[ distance to center are kept
+        r_max (float): Only points with ]r_min,r_max[ distance to center are kept
+
+    Returns:
+        np.array(dtype=np.float64): Points that are kept
+    """
+
+    d = np.sqrt(np.sum((p - center) ** 2, axis=1))
+    i = np.where(np.logical_and(d > r_min, d < r_max))[0]
+    return p[i]
 
 
 @njit(nogil=True, parallel=True, cache=True)
@@ -179,7 +230,7 @@ def numba_fit_cylinder_ransac(
 
     thread_cylinder_basis = np.zeros(shape=(nb_test_min, 3), dtype=np.uint64)
     thread_pct_inliers = np.zeros(shape=(nb_test_min), dtype=np.float64)
-    # Do this at least nb_test_min times
+    # Do this at least nb_test_min times in parallel
     for test_idx in prange(nb_test_min):
         # Randomly pick 3 points
         p_indexes = numba_random_indices(p.shape[0])
@@ -265,6 +316,18 @@ def numba_fit_cylinder_ransac(
 
 @njit(cache=True)
 def numba_close(a, b):
+    """
+    Numba implementation of math.isclose (numba does not support isclose())
+
+    Return True if the values a and b are close to each other and False otherwise.
+    Whether or not two values are considered close is determined according to given absolute and relative tolerances.
+
+    Args:
+        a (float): First number
+        b (float): Seconc number
+    Returns:
+        (bool) True if the number are close according to absolute and relative tolerance criterions, False otherwise
+    """
     rel_tol = 1e-09
     abs_tol = 0.0
     return abs(a - b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
@@ -277,6 +340,9 @@ def numba_distance(p, center, radius, direction):
 
     Args:
         p (np.array(dtype=np.float64)): Nx3 array containing set of points
+        center (np.array(dtype=np.float64)): The center of the cylinder
+        radius (float): The radius of the cylinder
+        direction (np.array(dtype=np.float64)): the direction in which the cylinder points
 
     Returns:
         int: Distance between cylinder's center and the set of points

@@ -2,19 +2,19 @@
 from .volume import Volume
 from .popup_utils import CustomProgressBar, CustomStatusDialog
 from .cylinder_ransac import (
-    numba_sample_around_cylinder,
+    sample_around_cylinder,
     track_branch,
-    config,
+    Config,
 )
 
-from .cylinder import cylinder, closest_branch
+from .cylinder import Cylinder, closest_branch
 import numpy as np
 from ransac_slicer.graph_branches import GraphBranches
 import qt
 
 
 def interpolate_point(
-    cyl_0: cylinder, cyl_1: cylinder, vol: Volume, cfg: config, distance: float
+    cyl_0: Cylinder, cyl_1: Cylinder, vol: Volume, cfg: Config, distance: float
 ) -> tuple[list[np.ndarray], list[list[np.ndarray]]]:
     """
     Interpolate points between two cylinders.
@@ -55,13 +55,13 @@ def interpolate_point(
         ],
     )
     for center, radius in centers_radius:
-        cyl = cylinder(center=center, radius=radius, direction=cyl_1.center - center)
+        cyl = Cylinder(center=center, radius=radius, direction=cyl_1.center - center)
         inliers = None
         tries = 0
 
         # Maximum number of interpolation attempt is 5
         while inliers is None and tries < 5:
-            inliers = numba_sample_around_cylinder(vol, cyl, cfg)
+            inliers = sample_around_cylinder(vol, cyl, cfg)
             tries += 1
 
         if inliers is not None:
@@ -72,10 +72,10 @@ def interpolate_point(
 
 
 def interpolate_centerline(
-    cylinders: list[cylinder],
+    cylinders: list[Cylinder],
     contour_points: list[list[np.ndarray]],
     vol: Volume,
-    cfg: config,
+    cfg: Config,
     distance: float,
 ) -> tuple[list[np.ndarray], list[list[np.ndarray]], list[float]]:
     """
@@ -164,8 +164,11 @@ def run_ransac(
     inlier_threshold: threshold percentage of the previous cylinder from which points are considered inlier.
     centerline_resolution: minimum distance between centerline points.
     maximum_turn_angle: the maximum turn angle possible for a vessel.
+    min_number_of_attempts: the minimum number of attempts done to find a fitting cylinder.
     max_number_of_attempts: the maximum number of attempts to find a fitting cylinder.
     max_number_of_cylinders: the maximum number of cylinder tracked in one tracking.
+    use_last_tracked_radius: flag to indicate whether we override the radius value entered with the radius
+        of the closest cylinder of the input cylinder.
     graph_branches: the graph branch object.
     isNewBranch: flag to tell if it is the first branch or not.
     progress_dialog: UI window to inform the user on the state of the branch tracking.
@@ -219,7 +222,7 @@ def run_ransac(
     # Tracking configuration
     pct_inl = percent_inlier_points / 100.0
     err = inlier_threshold / 100.0
-    cfg = config(
+    cfg = Config(
         percent_inliers=pct_inl,
         threshold=err,
         angle_max=maximum_turn_angle,
@@ -231,7 +234,7 @@ def run_ransac(
     # Initialize tracking
     if end_center_radius and use_last_tracked_radius:
         starting_radius = end_center_radius[0]
-    cyl = cylinder(starting_point, starting_radius, direction_point, height=0)
+    cyl = Cylinder(starting_point, starting_radius, direction_point, height=0)
 
     # Perform tracking
     centerline, contour_points, centerline_radius, cylinders = track_branch(
@@ -254,11 +257,11 @@ def run_ransac(
         graph_branches.on_merge_only_child(parent_node)
         return graph_branches
 
-    # In the case of a split, we had the closest point to the cylinders list so it can be interpolated aswell
+    # In the case of a split, we add the closest point to the cylinders list so the space inbetween can be interpolated aswell
     if len(centerline) - 1 == len(cylinders):
         cylinders.insert(
             0,
-            cylinder(
+            Cylinder(
                 center=centerline[0],
                 radius=centerline_radius[0],
                 direction=centerline[1] - centerline[0],

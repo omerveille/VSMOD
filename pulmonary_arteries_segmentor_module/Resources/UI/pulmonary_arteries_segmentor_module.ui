@@ -162,6 +162,9 @@
           </item>
           <item row="3" column="1">
            <widget class="qMRMLNodeComboBox" name="measureDistance">
+            <property name="toolTip">
+             <string>Select two points to measure the radius of a vessel.</string>
+            </property>
             <property name="nodeTypes">
              <stringlist>
               <string>vtkMRMLMarkupsLineNode</string>
@@ -231,6 +234,9 @@
           </item>
           <item row="5" column="1">
            <widget class="QDoubleSpinBox" name="centerlineResolution">
+            <property name="toolTip">
+             <string>Select the minimum space allowed between two points in the centerline.</string>
+            </property>
             <property name="minimum">
              <double>0.010000000000000</double>
             </property>
@@ -257,6 +263,9 @@
             <property name="enabled">
              <bool>false</bool>
             </property>
+            <property name="toolTip">
+             <string>Check if you want the entered radius value to be overridden by the radius of the cylinder closest to your starting cylinder.</string>
+            </property>
             <property name="text">
              <string/>
             </property>
@@ -282,6 +291,9 @@
            <widget class="QPushButton" name="measureRadiusButton">
             <property name="enabled">
              <bool>false</bool>
+            </property>
+            <property name="toolTip">
+             <string>Start a new placing phase to measure the radius of a vessel.</string>
             </property>
             <property name="text">
              <string>Measure Radius</string>
@@ -367,6 +379,9 @@
           </item>
           <item row="3" column="1">
            <widget class="QDoubleSpinBox" name="maximumTurnAngle">
+            <property name="toolTip">
+             <string>Select the maximum angle a cylinder can make with its predecessor.</string>
+            </property>
             <property name="maximum">
              <double>90.000000000000000</double>
             </property>
@@ -387,6 +402,9 @@
           </item>
           <item row="4" column="1">
            <widget class="QSpinBox" name="minNumberOfAttempts">
+            <property name="toolTip">
+             <string>Select the minimum number of tries the algorithm will take to fit a cylinder.</string>
+            </property>
             <property name="maximum">
              <number>99999999</number>
             </property>
@@ -407,6 +425,9 @@
           </item>
           <item row="5" column="1">
            <widget class="QSpinBox" name="maxNumberOfAttempts">
+            <property name="toolTip">
+             <string>Select the maximum number of tries the algorithm will take to fit a cylinder.</string>
+            </property>
             <property name="minimum">
              <number>0</number>
             </property>
@@ -433,6 +454,9 @@
           </item>
           <item row="6" column="1">
            <widget class="QSpinBox" name="maxNumberOfCylinders">
+            <property name="toolTip">
+             <string>Select the maximum number of cylinder the algorithm will try to find in one tracking.</string>
+            </property>
             <property name="minimum">
              <number>1</number>
             </property>
@@ -560,6 +584,9 @@
        </item>
        <item>
         <widget class="QPushButton" name="showContourPointsButton">
+         <property name="toolTip">
+          <string>Hide / show all the contour points. (carefull 3D Slicer may freeze)</string>
+         </property>
          <property name="text">
           <string>Show Contour Points</string>
          </property>
@@ -604,7 +631,7 @@
              <enum>Qt::TabFocus</enum>
             </property>
             <property name="toolTip">
-             <string>Reduction for vessels which radius is greater than the threshold value.</string>
+             <string>Select the proportion by which a vessel's radius is reduced after the reduction threshold. </string>
             </property>
             <property name="singleStep">
              <double>0.010000000000000</double>
@@ -633,7 +660,7 @@
           <item row="1" column="1">
            <widget class="QDoubleSpinBox" name="reductionThreshold">
             <property name="toolTip">
-             <string>Threshold after which vessels radius are reduced of a certain factor for seed creation.</string>
+             <string>Select the reduction threshold. </string>
             </property>
             <property name="maximum">
              <double>1000.000000000000000</double>
@@ -659,7 +686,7 @@
           <item row="2" column="1">
            <widget class="QSpinBox" name="contourDistance">
             <property name="toolTip">
-             <string>Distance between the edges of the vessels and the vessel contours.</string>
+             <string>Select the distance between the edges of the vessels and the vessel contours.</string>
             </property>
             <property name="minimum">
              <number>1</number>
@@ -680,6 +707,9 @@
           </item>
           <item row="3" column="1">
            <widget class="ctkCheckBox" name="mergeAllVesselsCheck">
+            <property name="toolTip">
+             <string>Check this if you want all the vessels to be merge inside on single region.</string>
+            </property>
             <property name="SlicerParameterName" stdset="0">
              <string>mergeAllVessels</string>
             </property>

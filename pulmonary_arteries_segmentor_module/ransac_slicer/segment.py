@@ -2,7 +2,7 @@ import numpy as np
 import math
 
 
-class segment:
+class Segment:
     """
     Class to represent a segment
     """

@@ -466,10 +466,6 @@ def sample_around_cylinder(vol, cyl, cfg):
     Returns:
         np.array(dtype=np.float64): Current cylinder's inlier point set
     """
-
-    order = vol.order
-    vol.order = 3
-
     current_center = cyl.center
 
     r_min = cyl.radius * cfg.r_min
@@ -478,7 +474,6 @@ def sample_around_cylinder(vol, cyl, cfg):
     err_threshold = cyl.radius * cfg.threshold
 
     p = sample(vol, current_center, ray_len, cfg.n_samples, cfg.ray_dir_set)
-    vol.order = order
     p = numba_filter_points(p, current_center, 0.1 * ray_len, 0.9 * ray_len)
 
     if p.shape[0] < 3:
@@ -563,11 +558,6 @@ def next_cylinder(vol, cyl, cfg):
         cylinder: Next cylinder
         np.array(dtype=np.float64): Next cylinder's inlier point set
     """
-
-    # Make sure 3rd order interpolation is used
-    order = vol.order
-    vol.order = 3
-
     # We try with original cfg.advance_ratio, and if it fails, try again with 2*cfg.advance_ratio (typical case when
     # the artery is highly curved)
     for li in [1, 2]:
@@ -699,13 +689,9 @@ def next_cylinder(vol, cyl, cfg):
         if dist_centers >= cyl.height / 2 and (
             cyl.height == 0 or dist_centers <= cyl.height * 2
         ):
-            # Restore interpolation order
-            vol.order = order
             return c_max, i_max
 
     # No new cylinder was found
-    vol.order = order
-
     return None, None
 
 

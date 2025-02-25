@@ -9,6 +9,7 @@ import slicer.util
 import vtk
 import json
 from math import radians
+from scipy.ndimage import spline_filter
 
 from slicer import (
     vtkMRMLScalarVolumeNode,
@@ -157,8 +158,8 @@ class pulmonary_arteries_segmentor_moduleWidget(
         ScriptedLoadableModuleWidget.__init__(self, parent)
         VTKObservationMixin.__init__(self)  # needed for parameter node observation
         self.logic = None
-        self._parameterNode = None
-        self._parameterNodeGuiTag = None
+        self.parameterNode = None
+        self.parameterNodeGuiTag = None
         self.graph_branches = None
         self.segmentationNode = None
         self.nodeDeletionObserverTag = None
@@ -220,10 +221,10 @@ class pulmonary_arteries_segmentor_moduleWidget(
         # Connections / Callbacks
 
         # These connections ensure that we update parameter node when scene is closed
-        self.addObserver(
+        self._addObserver(
             slicer.mrmlScene, slicer.mrmlScene.StartCloseEvent, self.onSceneStartClose
         )
-        self.addObserver(
+        self._addObserver(
             slicer.mrmlScene, slicer.mrmlScene.EndCloseEvent, self.onSceneEndClose
         )
 
@@ -239,8 +240,8 @@ class pulmonary_arteries_segmentor_moduleWidget(
             "clicked(bool)",
             lambda: (
                 self.graph_branches.clear_all(),
-                self.updateSegmentationButtonState(),
-                self._checkCanStartRansac(),
+                self.checkCanStartSegmentation(),
+                self.checkCanStartRansac(),
             ),
         )
 
@@ -269,8 +270,6 @@ class pulmonary_arteries_segmentor_moduleWidget(
 
         # Make sure parameter node is initialized (needed for module reload)
         self.initializeParameterNode()
-        self.checkCanPlacePoint()
-        self.checkCanMeasure()
 
     def cleanup(self) -> None:
         """
@@ -290,14 +289,28 @@ class pulmonary_arteries_segmentor_moduleWidget(
         Called each time the user opens a different module.
         """
         # Do not react to parameter node changes (GUI will be updated when the user enters into the module)
-        if self._parameterNode:
-            self._parameterNode.disconnectGui(self._parameterNodeGuiTag)
-            self._parameterNodeGuiTag = None
-            self.removeObserver(
-                self._parameterNode,
+        if self.parameterNode:
+            self.parameterNode.disconnectGui(self.parameterNodeGuiTag)
+            self.parameterNodeGuiTag = None
+            self._removeObserver(
+                self.parameterNode,
                 vtk.vtkCommand.ModifiedEvent,
-                self._checkCanStartRansac,
+                self.checkCanStartRansac,
             )
+
+    def _addObserver(self, obj, event, fct):
+        """
+        Wrapper of addObserver function, does nothing if the observer already exists.
+        """
+        if not self.hasObserver(obj, event, fct):
+            self.addObserver(obj, event, fct)
+
+    def _removeObserver(self, obj, event, fct):
+        """
+        Wrapper of removeObserver function, does nothing if the observer does not exists.
+        """
+        if self.hasObserver(obj, event, fct):
+            self.removeObserver(obj, event, fct)
 
     def onSceneStartClose(self, caller, event) -> None:
         """
@@ -324,13 +337,13 @@ class pulmonary_arteries_segmentor_moduleWidget(
         self.setParameterNode(self.logic.getParameterNode())
 
         # Select default input nodes if nothing is selected yet to save a few clicks for the user
-        if not self._parameterNode.inputVolume:
+        if not self.parameterNode.inputVolume:
             node = slicer.mrmlScene.GetFirstNodeByClass("vtkMRMLScalarVolumeNode")
             if node:
-                self._parameterNode.inputVolume = node
+                self.parameterNode.inputVolume = node
 
         # Create starting and direction point parameters if they do not already exist and select them
-        if not self._parameterNode.startingPoint:
+        if not self.parameterNode.startingPoint:
             node = slicer.util.getFirstNodeByClassByName(
                 "vtkMRMLMarkupsFiducialNode", "s"
             )
@@ -338,9 +351,9 @@ class pulmonary_arteries_segmentor_moduleWidget(
                 node = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsFiducialNode")
                 node.SetName("s")
             node.GetDisplayNode().SetSelectedColor(*direction_points_color)
-            self._parameterNode.startingPoint = node
+            self.parameterNode.startingPoint = node
 
-        if not self._parameterNode.directionPoint:
+        if not self.parameterNode.directionPoint:
             node = slicer.util.getFirstNodeByClassByName(
                 "vtkMRMLMarkupsFiducialNode", "d"
             )
@@ -348,17 +361,17 @@ class pulmonary_arteries_segmentor_moduleWidget(
                 node = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsFiducialNode")
                 node.SetName("d")
             node.GetDisplayNode().SetSelectedColor(*direction_points_color)
-            self._parameterNode.directionPoint = node
+            self.parameterNode.directionPoint = node
 
         # Create a line to measure diameters if it does not already exist
-        if not self._parameterNode.measureDistance:
+        if not self.parameterNode.measureDistance:
             node = slicer.util.getFirstNodeByClassByName(
                 "vtkMRMLMarkupsLineNode", "distance"
             )
             if node is None or not isinstance(node, slicer.vtkMRMLMarkupsLineNode):
                 node = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsLineNode")
                 node.SetName("distance")
-            self._parameterNode.measureDistance = node
+            self.parameterNode.measureDistance = node
 
     def setParameterNode(
         self,
@@ -369,93 +382,96 @@ class pulmonary_arteries_segmentor_moduleWidget(
         Observation is needed because when the parameter node is changed then the GUI must be updated immediately.
         """
 
-        if self._parameterNode:
-            self._parameterNode.disconnectGui(self._parameterNodeGuiTag)
-            self.removeObserver(
-                self._parameterNode,
+        if self.parameterNode:
+            self.parameterNode.disconnectGui(self.parameterNodeGuiTag)
+            self._removeObserver(
+                self.parameterNode,
                 vtk.vtkCommand.ModifiedEvent,
-                self._checkCanStartRansac,
+                self.checkCanStartRansac,
             )
-        self._parameterNode = inputParameterNode
-        if self._parameterNode:
-            # Note: in the .ui file, a Qt dynamic property called "SlicerParameterName" is set on each
-            # ui element that needs connection.
-            self._parameterNodeGuiTag = self._parameterNode.connectGui(self.ui)
-            self.addObserver(
-                self._parameterNode,
+            self._removeObserver(
+                self.parameterNode,
                 vtk.vtkCommand.ModifiedEvent,
-                self._checkCanStartRansac,
+                self.checkCanStartSegmentation,
             )
-            self.addObserver(
-                self._parameterNode,
-                vtk.vtkCommand.ModifiedEvent,
-                self.updateSegmentationButtonState,
-            )
-            self.addObserver(
-                self._parameterNode,
+            self._removeObserver(
+                self.parameterNode,
                 vtk.vtkCommand.ModifiedEvent,
                 self.checkCanPlacePoint,
             )
-            self.addObserver(
-                self._parameterNode,
+            self._removeObserver(
+                self.parameterNode,
                 vtk.vtkCommand.ModifiedEvent,
                 self.checkCanMeasure,
             )
-            self._checkCanStartRansac()
+        self.parameterNode = inputParameterNode
+        if self.parameterNode:
+            # Note: in the .ui file, a Qt dynamic property called "SlicerParameterName" is set on each
+            # ui element that needs connection.
+            self.parameterNodeGuiTag = self.parameterNode.connectGui(self.ui)
+            self._addObserver(
+                self.parameterNode,
+                vtk.vtkCommand.ModifiedEvent,
+                self.checkCanStartRansac,
+            )
+            self._addObserver(
+                self.parameterNode,
+                vtk.vtkCommand.ModifiedEvent,
+                self.checkCanStartSegmentation,
+            )
+            self._addObserver(
+                self.parameterNode,
+                vtk.vtkCommand.ModifiedEvent,
+                self.checkCanPlacePoint,
+            )
+            self._addObserver(
+                self.parameterNode,
+                vtk.vtkCommand.ModifiedEvent,
+                self.checkCanMeasure,
+            )
+            self.checkCanStartRansac()
+            self.checkCanPlacePoint()
+            self.checkCanMeasure()
 
-    def _addObserver(self, obj, event, fct):
-        """
-        Wrapper of addObserver function, does nothing if the observer already exists.
-        """
-        if not self.hasObserver(obj, event, fct):
-            self.addObserver(obj, event, fct)
-
-    def _removeObserver(self, obj, event, fct):
-        """
-        Wrapper of removeObserver function, does nothing if the observer does not exists.
-        """
-        if self.hasObserver(obj, event, fct):
-            self.removeObserver(obj, event, fct)
-
-    def _checkCanStartRansac(self, caller=None, event=None) -> None:
+    def checkCanStartRansac(self, caller=None, event=None) -> None:
         """
         Update the create and delete button state depending on the parameters state.
         """
-        starting_point = self._parameterNode.startingPoint
-        direction_point = self._parameterNode.directionPoint
+        starting_point = self.parameterNode.startingPoint
+        direction_point = self.parameterNode.directionPoint
 
         if starting_point:
             self._addObserver(
                 starting_point,
                 vtkMRMLMarkupsNode.PointAddedEvent,
-                self._checkCanStartRansac,
+                self.checkCanStartRansac,
             )
             self._addObserver(
                 starting_point,
                 vtkMRMLMarkupsNode.PointRemovedEvent,
-                self._checkCanStartRansac,
+                self.checkCanStartRansac,
             )
 
         if direction_point:
             self._addObserver(
                 direction_point,
                 vtkMRMLMarkupsNode.PointAddedEvent,
-                self._checkCanStartRansac,
+                self.checkCanStartRansac,
             )
             self._addObserver(
                 direction_point,
                 vtkMRMLMarkupsNode.PointRemovedEvent,
-                self._checkCanStartRansac,
+                self.checkCanStartRansac,
             )
 
         if (
-            self._parameterNode
+            self.parameterNode
             and not self.isPlacingPoints
             and all(
                 [
-                    self._parameterNode.inputVolume,
-                    self._parameterNode.startingPoint,
-                    self._parameterNode.directionPoint,
+                    self.parameterNode.inputVolume,
+                    self.parameterNode.startingPoint,
+                    self.parameterNode.directionPoint,
                 ]
             )
             and starting_point.GetNumberOfControlPoints()
@@ -491,13 +507,13 @@ class pulmonary_arteries_segmentor_moduleWidget(
         Enables the place button if the starting and direction point parameters exist.
         """
         id_starting = (
-            self._parameterNode.startingPoint.GetID()
-            if self._parameterNode.startingPoint
+            self.parameterNode.startingPoint.GetID()
+            if self.parameterNode.startingPoint
             else None
         )
         id_direction = (
-            self._parameterNode.directionPoint.GetID()
-            if self._parameterNode.directionPoint
+            self.parameterNode.directionPoint.GetID()
+            if self.parameterNode.directionPoint
             else None
         )
 
@@ -516,7 +532,7 @@ class pulmonary_arteries_segmentor_moduleWidget(
         self.isPlacingPoints = True
         self.ui.createBranch.enabled = False
 
-        starting_point = self._parameterNode.startingPoint
+        starting_point = self.parameterNode.startingPoint
         starting_point.GetDisplayNode().SetSelectedColor(*direction_points_color)
 
         # Prepare the case where the user place the first point
@@ -546,7 +562,7 @@ class pulmonary_arteries_segmentor_moduleWidget(
         Each function of this procedure are called through observers callbacks.
         """
         self.startingPointPlaced = True
-        starting_point = self._parameterNode.startingPoint
+        starting_point = self.parameterNode.startingPoint
 
         if not starting_point:
             return
@@ -562,7 +578,7 @@ class pulmonary_arteries_segmentor_moduleWidget(
             self.resetPlacementState,
         )
 
-        direction_point = self._parameterNode.directionPoint
+        direction_point = self.parameterNode.directionPoint
         direction_point.GetDisplayNode().SetSelectedColor(*direction_points_color)
 
         # Prepare the case where the user placed the last point
@@ -616,9 +632,9 @@ class pulmonary_arteries_segmentor_moduleWidget(
             return
 
         self.isPlacingPoints = False
-        self._checkCanStartRansac()
+        self.checkCanStartRansac()
 
-        starting_point = self._parameterNode.startingPoint
+        starting_point = self.parameterNode.startingPoint
         self._removeObserver(
             starting_point,
             vtkMRMLMarkupsNode.PointPositionDefinedEvent,
@@ -630,7 +646,7 @@ class pulmonary_arteries_segmentor_moduleWidget(
             self.resetPlacementState,
         )
 
-        direction_point = self._parameterNode.directionPoint
+        direction_point = self.parameterNode.directionPoint
         self._removeObserver(
             direction_point,
             vtkMRMLMarkupsNode.PointPositionDefinedEvent,
@@ -661,7 +677,7 @@ class pulmonary_arteries_segmentor_moduleWidget(
         Enables the measure button if the distance parameter exist.
         """
         self.ui.measureRadiusButton.enabled = (
-            self._parameterNode.measureDistance is not None
+            self.parameterNode.measureDistance is not None
         )
 
     def measure(self, *args):
@@ -670,7 +686,7 @@ class pulmonary_arteries_segmentor_moduleWidget(
 
         Each function of this procedure are called through observers callbacks.
         """
-        measuring_node = self._parameterNode.measureDistance
+        measuring_node = self.parameterNode.measureDistance
 
         if not measuring_node:
             return
@@ -707,7 +723,7 @@ class pulmonary_arteries_segmentor_moduleWidget(
 
         Each function of this procedure are called through observers callbacks.
         """
-        measuring_node = self._parameterNode.measureDistance
+        measuring_node = self.parameterNode.measureDistance
 
         if not measuring_node:
             return
@@ -716,7 +732,7 @@ class pulmonary_arteries_segmentor_moduleWidget(
             distance = measuring_node.GetLineLengthWorld()
             if numba_close(distance, 0):
                 distance = 0.2
-            self._parameterNode.startingRadius = distance / 2
+            self.parameterNode.startingRadius = distance / 2
 
     def measureNodeRemoved(self, *args):
         """
@@ -725,7 +741,7 @@ class pulmonary_arteries_segmentor_moduleWidget(
 
         Each function of this procedure are called through observers callbacks.
         """
-        measuring_node = self._parameterNode.measureDistance
+        measuring_node = self.parameterNode.measureDistance
 
         if not measuring_node:
             return
@@ -755,18 +771,18 @@ class pulmonary_arteries_segmentor_moduleWidget(
                 height=50,
             )
             self.graph_branches = self.logic.processBranch(
-                raw_volume=self._parameterNode.inputVolume,
-                starting_point_list=self._parameterNode.startingPoint,
-                direction_point_list=self._parameterNode.directionPoint,
-                percent_inlier_points=self._parameterNode.percentInlierPoints,
-                inlier_threshold=self._parameterNode.percentThreshold,
-                starting_radius=self._parameterNode.startingRadius,
-                centerline_resolution=self._parameterNode.centerlineResolution,
-                maximum_turn_angle=self._parameterNode.maximumTurnAngle,
-                min_number_of_attempts=self._parameterNode.minNumberOfAttempts,
-                max_number_of_attempts=self._parameterNode.maxNumberOfAttempts,
-                max_number_of_cylinders=self._parameterNode.maxNumberOfCylinders,
-                use_last_tracked_radius=self._parameterNode.useLastTrackedRadius,
+                raw_volume=self.parameterNode.inputVolume,
+                starting_point_list=self.parameterNode.startingPoint,
+                direction_point_list=self.parameterNode.directionPoint,
+                percent_inlier_points=self.parameterNode.percentInlierPoints,
+                inlier_threshold=self.parameterNode.percentThreshold,
+                starting_radius=self.parameterNode.startingRadius,
+                centerline_resolution=self.parameterNode.centerlineResolution,
+                maximum_turn_angle=self.parameterNode.maximumTurnAngle,
+                min_number_of_attempts=self.parameterNode.minNumberOfAttempts,
+                max_number_of_attempts=self.parameterNode.maxNumberOfAttempts,
+                max_number_of_cylinders=self.parameterNode.maxNumberOfCylinders,
+                use_last_tracked_radius=self.parameterNode.useLastTrackedRadius,
                 graph_branches=self.graph_branches,
                 isNewBranch=self.ui.createBranch.text == "Create New Branch",
                 progress_dialog=progress_dialog,
@@ -776,11 +792,11 @@ class pulmonary_arteries_segmentor_moduleWidget(
 
             # Select the starting markup node to ease future node placement
             slicer.app.applicationLogic().GetSelectionNode().SetActivePlaceNodeID(
-                self._parameterNode.startingPoint.GetID()
+                self.parameterNode.startingPoint.GetID()
             )
 
-            self._checkCanStartRansac()
-            self.updateSegmentationButtonState()
+            self.checkCanStartRansac()
+            self.checkCanStartSegmentation()
 
     def changeTextSize(self, value):
         """
@@ -790,14 +806,14 @@ class pulmonary_arteries_segmentor_moduleWidget(
         for markup in self.graph_branches.centerline_markups:
             markup.GetDisplayNode().SetTextScale(value)
 
-    def updateSegmentationButtonState(self, *args):
+    def checkCanStartSegmentation(self, *args):
         """
         Enables the create segmentation button when at least one branch exist.
         """
         paintButton: qt.QPushButton = self.ui.paintButton
         paintButton.enabled = (
             len(self.graph_branches.centerline_markups) != 0
-            and self._parameterNode.inputVolume
+            and self.parameterNode.inputVolume
         )
 
         if self.segmentationNode is None or self.segmentationNode.GetScene() is None:
@@ -823,10 +839,10 @@ class pulmonary_arteries_segmentor_moduleWidget(
                 )
                 self.nodeDeletionObserverTag = slicer.mrmlScene.AddObserver(
                     slicer.vtkMRMLScene.NodeAboutToBeRemovedEvent,
-                    self.updateSegmentationButtonState,
+                    self.checkCanStartSegmentation,
                 )
                 self.segmentationNode.SetReferenceImageGeometryParameterFromVolumeNode(
-                    self._parameterNode.inputVolume
+                    self.parameterNode.inputVolume
                 )
 
                 self.segmentationNode.SetName("Segmentation")
@@ -854,16 +870,16 @@ class pulmonary_arteries_segmentor_moduleWidget(
 
             # Create the segments and paint them
             paint_segments(
-                self._parameterNode.inputVolume,
+                self.parameterNode.inputVolume,
                 self.graph_branches.centerlines,
                 self.graph_branches.names,
                 self.graph_branches.centerline_radius,
                 branch_draw_order,
                 self.segmentationNode,
-                self._parameterNode.reductionFactor,
-                self._parameterNode.reductionThreshold,
-                self._parameterNode.contourDistance,
-                self._parameterNode.mergeAllVessels,
+                self.parameterNode.reductionFactor,
+                self.parameterNode.reductionThreshold,
+                self.parameterNode.contourDistance,
+                self.parameterNode.mergeAllVessels,
             )
 
             # Set the current segmentation into the UI
@@ -882,12 +898,12 @@ class pulmonary_arteries_segmentor_moduleWidget(
             self.ui.showCenterlineButton.text = "Show Centerlines"
             self.ui.showContourPointsButton.text = "Show Contour Points"
 
-            self.updateSegmentationButtonState()
+            self.checkCanStartSegmentation()
 
             # We track segmentation deletion
             self.nodeDeletionObserverTag = slicer.mrmlScene.AddObserver(
                 slicer.vtkMRMLScene.NodeAboutToBeRemovedEvent,
-                self.updateSegmentationButtonState,
+                self.checkCanStartSegmentation,
             )
 
     def onLockButton(self) -> None:
@@ -936,8 +952,8 @@ class pulmonary_arteries_segmentor_moduleWidget(
             # We ask to clear the tree before loading the new one, if not we do nothing
             if not self.graph_branches.clear_all():
                 return
-            self.updateSegmentationButtonState()
-            self._checkCanStartRansac()
+            self.checkCanStartSegmentation()
+            self.checkCanStartRansac()
 
         with slicer.util.tryWithErrorDisplay(
             "Failed to restore tree architecture.", waitCursor=True
@@ -989,8 +1005,8 @@ class pulmonary_arteries_segmentor_moduleWidget(
                 self.graph_branches.tree_widget.insertAfterNode(
                     nodeId=current_edge_name, parentNodeId=parent_edge_name
                 )
-            self._checkCanStartRansac()
-            self.updateSegmentationButtonState()
+            self.checkCanStartRansac()
+            self.checkCanStartSegmentation()
             self.recenter3dView()
 
 
@@ -1069,17 +1085,21 @@ class pulmonary_arteries_segmentor_moduleLogic(ScriptedLoadableModuleLogic):
         GraphBranches
         Updated graph
         """
-        # volume, starting_point, direction_point, percent_inlier_points, inlier_threshold, starting_radius
+
+        # Prepare the volume object
+        interpolation_order = 3
         vol = slicer.util.array(raw_volume.GetID())
         vol = vol.swapaxes(0, 2)
+        vol = spline_filter(vol, order=interpolation_order)
 
         ijk_to_ras = vtk.vtkMatrix4x4()
         raw_volume.GetIJKToRASMatrix(ijk_to_ras)
         np_ijk_to_ras = np.zeros(shape=(4, 4))
         ijk_to_ras.DeepCopy(np_ijk_to_ras.ravel(), ijk_to_ras)
 
-        vol = Volume(vol, np_ijk_to_ras)
+        vol = Volume(vol, np_ijk_to_ras, interpolation_order)
 
+        # Prepare the starting and direction point objects
         starting_point = np.array([0, 0, 0])
         starting_point_list.GetNthControlPointPosition(
             starting_point_list.GetNumberOfControlPoints() - 1, starting_point
@@ -1090,6 +1110,7 @@ class pulmonary_arteries_segmentor_moduleLogic(ScriptedLoadableModuleLogic):
             direction_point_list.GetNumberOfControlPoints() - 1, direction_point
         )
 
+        # Convert degrees into radians
         radians_angle = radians(maximum_turn_angle)
 
         graph_branches = run_ransac(
@@ -1126,25 +1147,46 @@ class pulmonary_arteries_segmentor_moduleTest(ScriptedLoadableModuleTest):
     """
 
     def setUp(self):
-        """Do whatever is needed to reset the state - typically a scene clear will be enough."""
         slicer.mrmlScene.Clear()
 
     def runTest(self):
-        """Run as few or as many tests as needed here."""
+        import unittest
+        from module_tests import (
+            BranchTreeTest,
+            CylinderRansacTest,
+            CylinderTest,
+            EndToEndTest,
+            GraphBranchTest,
+            HelperTest,
+            JitCompiledFunctionsTest,
+            PopupUtilsTest,
+            RansacTest,
+            RegionGrowingSeedsTest,
+            SegmentTests,
+            SegmentationUtilsTest,
+            VolumeTest,
+        )
+
         self.setUp()
-        self.test_pulmonary_arteries_segmentor_module()
 
-    def test_pulmonary_arteries_segmentor_module(self):
-        """Ideally you should have several levels of tests.  At the lowest level
-        tests should exercise the functionality of the logic with different inputs
-        (both valid and invalid).  At higher levels your tests should emulate the
-        way the user would interact with your code and confirm that it still works
-        the way you intended.
-        One of the most important features of the tests is that it should alert other
-        developers when their changes will have an impact on the behavior of your
-        module.  For example, if a developer removes a feature that you depend on,
-        your test should break so they know that the feature is needed.
-        """
+        testCases = [
+            BranchTreeTest,
+            CylinderRansacTest,
+            CylinderTest,
+            EndToEndTest,
+            GraphBranchTest,
+            HelperTest,
+            JitCompiledFunctionsTest,
+            PopupUtilsTest,
+            RansacTest,
+            RegionGrowingSeedsTest,
+            SegmentTests,
+            SegmentationUtilsTest,
+            VolumeTest,
+        ]
 
-        self.delayDisplay("Starting the test")
-        self.delayDisplay("Test passed")
+        suite = unittest.TestSuite(
+            [unittest.TestLoader().loadTestsFromTestCase(case) for case in testCases]
+        )
+        unittest.TextTestRunner(verbosity=3).run(suite)
+        slicer.mrmlScene.Clear()

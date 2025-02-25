@@ -47,7 +47,7 @@ class Volume:
     Class to represent a volume
     """
 
-    def __init__(self, data=np.zeros((0, 0, 0)), ijk_to_ras=np.eye(4)):
+    def __init__(self, data=np.zeros((0, 0, 0)), ijk_to_ras=np.eye(4), order=1):
         """
         Initializes a volume
 
@@ -55,6 +55,7 @@ class Volume:
             data (np.array(dtype=np.float64), optional): Volume's data. Defaults to np.zeros((0, 0, 0)).
             ijk_to_ras (np.array(dtype=np.float64), optional): Volume's IJK to RAS transformation.
                                                                Defaults to np.eye(4).
+            order int: Interpolation order
 
         Raises:
             ValueError: If volume's data or matrix transformation isn't good shape
@@ -66,7 +67,7 @@ class Volume:
         self._vol, self.ijk_to_ras = data, ijk_to_ras
 
         # Default to linear interpolation
-        self._order = 1
+        self._order = order
 
     def __call__(self, p):
         """

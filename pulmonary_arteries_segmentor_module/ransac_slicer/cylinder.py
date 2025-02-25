@@ -133,7 +133,9 @@ class Cylinder:
         n = np.linalg.norm(d)
 
         if math.isclose(n, 0):
-            raise ValueError
+            raise ValueError(
+                "The length of the direction vector of the cylinder is too close to 0.\nYou should space the starting and direction point a bit more."
+            )
         else:
             self._direction = d / n
 

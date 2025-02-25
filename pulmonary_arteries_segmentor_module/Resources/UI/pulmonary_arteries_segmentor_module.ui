@@ -575,7 +575,7 @@
           <string>Hide / show all the centerlines.</string>
          </property>
          <property name="text">
-          <string>Hide Centerlines</string>
+          <string>Show Centerlines</string>
          </property>
          <property name="checkable">
           <bool>false</bool>

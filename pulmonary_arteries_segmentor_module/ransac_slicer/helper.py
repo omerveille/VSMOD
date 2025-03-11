@@ -22,10 +22,14 @@ def time_function(func):
     return wrapper
 
 
-def flush_timers():
+def flush_timers() -> Path:
     """
     Write timers to disk near slicer executable.
+
+    Returns:
+        The path to the created file.
     """
+
     timer_file_path = Path(
         f"./timers_{datetime.now().strftime('%Y-%m-%d_%H:%M:%S')}.json"
     )
@@ -33,6 +37,8 @@ def flush_timers():
     with open(timer_file_path, "w+") as f:
         json.dump(timers, f, indent=4)
     timers.clear()
+
+    return timer_file_path.absolute()
 
 
 def _nv_to_geo_level(nv):
@@ -59,7 +65,7 @@ def sample_gauss_sphere(n_vertices, center=[0, 0, 0], radius=1):
     regularly sampled directions. Works by recursive subdivision of an icosahedron (see _nv_to_geo_level to compute the
     number of subdivisions).
     Thereafter, the returned array may not have exactly n_vertices vertices, but will have at least this number, with a
-    minimum of 42 (esp. if n_vertices is <= 0).
+    minimum of 12 (esp. if n_vertices is <= 0).
     Returns a Nx3 array where N is the actual number of vertices.
 
     Args:
@@ -88,7 +94,7 @@ def sample_half_gauss_sphere(n_vertices):
     regularly sampled orientations, regardless of the direction. Works by recursive subdivision of an icosahedron
     (see _nv_to_geo_level to compute the number of subdivisions).
     Thereafter, the returned array may not have exactly n_vertices vertices, but will have at least this number, with a
-    minimum of 21 (esp. if n_vertices is <=0).
+    minimum of 6 (esp. if n_vertices is <=0).
 
     Args:
         n_vertices (int): Number of vertices
@@ -109,13 +115,13 @@ def sample_half_gauss_sphere(n_vertices):
 
 def gradient_central_dif(a):
     """
-    _summary_
+    Compute a gradient central difference over a vector.
 
     Args:
-        a (_type_): _description_
+        a (np.ndarray): vector containing values
 
     Returns:
-        _type_: _description_
+        np.ndarray: gradient central difference of the input array
     """
 
     g = np.zeros(a.shape)
@@ -126,13 +132,13 @@ def gradient_central_dif(a):
 
 def homogenize(p):
     """
-    _summary_
+    Transform points into homogenes coordinates.
 
     Args:
-        p (_type_): _description_
+        p (np.ndarray): An array containing points
 
     Returns:
-        _type_: _description_
+       np.ndarray : The same array but in homegenes coordinates
     """
 
     if len(p.shape) == 1:

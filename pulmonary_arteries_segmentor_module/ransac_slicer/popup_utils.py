@@ -73,7 +73,7 @@ class CustomStatusDialog:
         self.label = label
         self.dialog = dialog
 
-    def setText(self, text: str):
+    def set_text(self, text: str):
         """
         Change text and update UI.
         """

@@ -20,16 +20,6 @@ class Segment:
         self.start = np.asarray(start, dtype=np.float64)
         self.end = np.asarray(end, dtype=np.float64)
 
-    def __repr__(self):
-        """
-        Represent a segment object as a string
-
-        Returns:
-            str: Segment object representation
-        """
-
-        return f"Segment ::\n\tStart: {self.start} -- End: {self.end}"
-
     def as_vector(self):
         """
         Compute the segment's vector
@@ -39,18 +29,6 @@ class Segment:
         """
 
         return self.end - self.start
-
-    def len_sqr(self):
-        """
-        Compute the squared segment length
-
-        Returns:
-            np.array(dtype=np.float64): Squared segment length
-        """
-
-        d = self.as_vector()
-
-        return np.dot(d, d)
 
     def distance_sqr(self, p):
         """
@@ -63,7 +41,6 @@ class Segment:
         Returns:
             np.array(dtype=np.float64): Squared distance
         """
-
         if len(p.shape) == 1:
             pa = p.reshape((1, 3))
         else:
@@ -76,7 +53,7 @@ class Segment:
         v2 = li @ li
 
         if math.isclose(v2, 0):
-            return v1
+            return v1[0] if len(v1.shape) == 1 else v1
 
         v3 = d1 @ li / v2
         v3[v3 <= 0] = 0

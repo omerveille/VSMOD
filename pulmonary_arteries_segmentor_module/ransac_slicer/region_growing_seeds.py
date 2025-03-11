@@ -6,39 +6,44 @@ import vtk
 from skimage.morphology import binary_dilation, ball
 from .color_palettes import vessel_colors, contour_color
 import time
+import networkx as nx
 
 
-def update_segment(
-    segment_ids: Union[str, list],
-    labelmap_node: slicer.vtkMRMLSegmentationNode,
-    data: np.ndarray,
-    segmentation_node: slicer.vtkMRMLLabelMapVolumeNode,
+def _compute_draw_order(
+    graph_branches_nodes: list[np.ndarray], graph_branches_edges: list[tuple[int, int]]
 ):
     """
-    Update a segment labelmap.
+    Define the order in which the branches will be drawn.
+    We draw in reverse bfs order, so that parent branches are always drawn
+    on top of childs.
 
     Parameters
     ----------
 
-    segment_ids: id or list of ids of the segment(s) to update.
-    labelmap_node: slicer labelmap to update.
-    data: numpy array that delimit the segment zone.
-    segmentation_node: slicer segmentation on which the segment are updated.
+    graph_branches_nodes: list of points which are the birfucation, root or leaves
+    graph_branches_edges: list of all the edges
+
+    Returns
+    ----------
+
+    list[int]: indexes of the branch to draw.
+    We draw from first to last listed.
     """
-    vtk_segment_id = vtk.vtkStringArray()
-    if isinstance(segment_ids, list):
-        for ids in segment_ids:
-            vtk_segment_id.InsertNextValue(ids)
-    else:
-        vtk_segment_id.InsertNextValue(segment_ids)
 
-    slicer.util.updateVolumeFromArray(labelmap_node, data)
-    slicer.modules.segmentations.logic().ImportLabelmapToSegmentationNode(
-        labelmap_node, segmentation_node, vtk_segment_id
-    )
+    G = nx.DiGraph()
+    for i, node in enumerate(graph_branches_nodes):
+        G.add_node(i, pos=node)
+
+    for i, edge in enumerate(graph_branches_edges):
+        G.add_edge(
+            edge[0],
+            edge[1],
+            edge_idx=i,
+        )
+    return [G[a][b]["edge_idx"] for a, b in nx.bfs_edges(G, source=0)][::-1]
 
 
-def compute_bbox(
+def _compute_bbox(
     centerline_points: list[np.ndarray],
     radius: list[np.ndarray],
     lower_bound: np.ndarray,
@@ -75,7 +80,7 @@ def compute_bbox(
     return min_point, max_point
 
 
-def adapt_radius(
+def _adapt_radius(
     radius: float, reduction_threshold: float, reduction_factor: float
 ) -> float:
     """
@@ -102,12 +107,42 @@ def adapt_radius(
     )
 
 
-def split_list(lst, n):
+def _split_list(lst, n):
     """
     Split list in n parts.
     """
     for i in range(0, len(lst), n):
         yield lst[i : i + n]
+
+
+def update_segment(
+    segment_ids: Union[str, list],
+    labelmap_node: slicer.vtkMRMLSegmentationNode,
+    data: np.ndarray,
+    segmentation_node: slicer.vtkMRMLLabelMapVolumeNode,
+):
+    """
+    Update a segment labelmap.
+
+    Parameters
+    ----------
+
+    segment_ids: id or list of ids of the segment(s) to update.
+    labelmap_node: slicer labelmap to update.
+    data: numpy array that delimit the segment zone.
+    segmentation_node: slicer segmentation on which the segment are updated.
+    """
+    vtk_segment_id = vtk.vtkStringArray()
+    if isinstance(segment_ids, list):
+        for ids in segment_ids:
+            vtk_segment_id.InsertNextValue(ids)
+    else:
+        vtk_segment_id.InsertNextValue(segment_ids)
+
+    slicer.util.updateVolumeFromArray(labelmap_node, data)
+    slicer.modules.segmentations.logic().ImportLabelmapToSegmentationNode(
+        labelmap_node, segmentation_node, vtk_segment_id
+    )
 
 
 def paint_segments(
@@ -161,7 +196,7 @@ def paint_segments(
     # Timer added to let the interface load
     time.sleep(0.1)
 
-    progress_dialog.setText("Clearing all segments ...")
+    progress_dialog.set_text("Clearing all segments ...")
     segmentation.RemoveAllSegments()
     progress_dialog.close()
 
@@ -178,29 +213,29 @@ def paint_segments(
     labelmap_node.SetAndObserveImageData(vtk.vtkImageData())
     labelmap_node.GetImageData().SetDimensions(volume_dimensions)
 
-    # Set the labelmap pixel values to uint8 with one channel, it might become a problem later if there are more than 255 labels
-    labelmap_node.GetImageData().AllocateScalars(vtk.VTK_UNSIGNED_CHAR, 1)
+    # Set the labelmap pixel values to uint16 with one channel (65535 max segment)
+    labelmap_node.GetImageData().AllocateScalars(vtk.VTK_UNSIGNED_SHORT, 1)
 
     # Transform ras coordinates (real world coordinates) into ijk coordinates (voxel coordinates)
     centerlines = [
         [
             [(np_ras_to_ijk @ np.array([*point, 1]))[-2::-1] for point in list_part]
-            for list_part in split_list(centerline, 3)
+            for list_part in _split_list(centerline, 3)
         ]
         for centerline in centerlines
     ]
-    radius = [list(split_list(radius_list, 3)) for radius_list in radius]
+    radius = [list(_split_list(radius_list, 3)) for radius_list in radius]
 
     # Constants
     x, y, z = np.indices(volume_dimensions)
     low_bound = np.array([0, 0, 0], dtype=int)
     high_bound = volume_dimensions - 1
 
-    # Paint centerlines
-    treated_radius = [
+    # Radius is pixel coordinates
+    ijk_radius_thresholded = [
         [
             [
-                np.array([adapt_radius(r, reduction_threshold, reduction_factor)] * 3)
+                np.array([_adapt_radius(r, reduction_threshold, reduction_factor)] * 3)
                 / voxel_spacing
                 for r in radius_part
             ]
@@ -208,8 +243,12 @@ def paint_segments(
         ]
         for radius_per_centerline in radius
     ]
-    segment_map = np.zeros(volume_dimensions, dtype=np.uint8)
+    segment_map = np.zeros(volume_dimensions, dtype=np.uint16)
 
+    """
+    Paint segment for each centerline, the segment region is underestimated for large vessels (c.f _adapt_radius function) so that
+    it does not leak outside the vessels
+    """
     for centerline_idx in CustomProgressBar(
         iterable=branch_draw_order,
         quantity_to_measure="vessels painted",
@@ -217,10 +256,10 @@ def paint_segments(
         width=300,
     ):
         centerline = centerlines[centerline_idx]
-        radius_per_centerline = treated_radius[centerline_idx]
+        radius_per_centerline = ijk_radius_thresholded[centerline_idx]
         sub_segment_map = np.zeros_like(segment_map, dtype=np.bool_)
         for points, points_radius in zip(centerline, radius_per_centerline):
-            lower_edge, highter_edge = compute_bbox(
+            lower_edge, highter_edge = _compute_bbox(
                 points, points_radius, low_bound, volume_dimensions
             )
             for point, radius_ in zip(points, points_radius):
@@ -283,11 +322,11 @@ def paint_segments(
 
         segment_map[sub_segment_map] = centerline_idx + 1
 
-    del treated_radius
+    del ijk_radius_thresholded
 
-    # Paint contours
+    # Paint contours will be a dilated version of the already computed segment map
     contours_map = (segment_map > 0).astype(np.bool_)
-    # Filtering point that have not been shrunk
+    # Filtering point to keep the one that have been shrunk, we will compute the inside region but not underestimated this time
     centerline_and_radius = [
         [centerline_part, [np.array([r] * 3) / voxel_spacing for r in radius_part]]
         for (centerline, radius_per_centerline) in zip(centerlines, radius)
@@ -296,7 +335,7 @@ def paint_segments(
     ]
 
     for points, points_radius in centerline_and_radius:
-        lower_edge, highter_edge = compute_bbox(
+        lower_edge, highter_edge = _compute_bbox(
             points, points_radius, low_bound, volume_dimensions
         )
         for point, radius_ in zip(points, points_radius):
@@ -351,11 +390,11 @@ def paint_segments(
     time.sleep(0.1)
 
     # Outter edge
-    progress_dialog.setText("Computing the outter edge ...")
+    progress_dialog.set_text("Computing the outter edge ...")
     contours_dilated = binary_dilation(contours_map, ball(radius=contour_distance + 2))
 
     # Inner edge
-    progress_dialog.setText("Computing the inner edge ...")
+    progress_dialog.set_text("Computing the inner edge ...")
     contours_dilated[
         binary_dilation(contours_map, ball(radius=contour_distance))
     ] = False
@@ -364,12 +403,12 @@ def paint_segments(
     # Add the segment to the segmentation, also merge the segment and contour map
     ids = []
     if merge_all_vessels:
-        segment_map = (segment_map > 0).astype(np.uint8) + (
-            contours_dilated * 2
-        ).astype(np.uint8)
+        segment_map = (segment_map > 0).astype(np.uint16) + contours_dilated.astype(
+            np.uint16
+        ) * 2
         ids.append(segmentation.AddEmptySegment("", "Vessels", vessel_colors[0]))
     else:
-        segment_map += (contours_dilated * (len(centerlines) + 1)).astype(np.uint8)
+        segment_map += contours_dilated.astype(np.uint16) * (len(centerlines) + 1)
         for idx, segment_name in enumerate(centerline_names):
             ids.append(
                 segmentation.AddEmptySegment(

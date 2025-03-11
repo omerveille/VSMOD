@@ -1,7 +1,7 @@
 import numpy as np
 
 # Color palette generated from this beautiful website : https://medialab.github.io/iwanthue/
-colors = [
+vessel_colors = [
     [217, 38, 106],
     [0, 152, 91],
     [173, 102, 220],
@@ -25,7 +25,7 @@ colors = [
 ]
 
 vessel_colors: list[list[float, float, float]] = [
-    (np.array(color, dtype=float) / 255.0).tolist() for color in colors
+    (np.array(color, dtype=float) / 255.0).tolist() for color in vessel_colors
 ]
 contour_color: list[float, float, float] = [1.0, 215.0 / 255.0, 0.0]
 direction_points_color: list[float, float, float] = (

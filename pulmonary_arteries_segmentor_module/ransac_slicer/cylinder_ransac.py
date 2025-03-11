@@ -21,7 +21,7 @@ class Config:
     Configuration for RANSAC algorithm
     """
 
-    _min_radius = 0.05
+    _min_radius = 0.5
     _max_radius = 5
 
     def __init__(
@@ -771,7 +771,7 @@ def track_branch(
 
             contour_points_cpt += len(current_contour_points)
 
-            progress_dialog.setText(
+            progress_dialog.set_text(
                 f"Centerline points found: {len(current_branch_cylinders)}\nContour points found: {contour_points_cpt}"
             )
 

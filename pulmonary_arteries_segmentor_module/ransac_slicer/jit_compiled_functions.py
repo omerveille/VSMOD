@@ -13,7 +13,7 @@ config.THREADING_LAYER = "omp"
 
 
 @njit(cache=True)
-def numba_random_indices(n):
+def numba_random_indices(n: int) -> np.ndarray:
     """
     Return 3 random index value and make sure they are distinct in a numba friendly way.
 
@@ -34,7 +34,7 @@ def numba_random_indices(n):
 
 
 @intrinsic(cache=True)
-def atomic_xchg(typingctx, ptr, val):
+def _atomic_xchg(typingctx, ptr, val):
     """
     Implementation of an atomic exchange.
     Atomically swap a value pointed and returns it.
@@ -60,7 +60,7 @@ def atomic_xchg(typingctx, ptr, val):
 
 
 @njit
-def atomic_exchange(arr, new_value):
+def atomic_exchange(arr: np.ndarray, new_value: int) -> int:
     """
     Implementation of an atomic exchange.
     Atomically swap a value pointed and returns it.
@@ -74,12 +74,12 @@ def atomic_exchange(arr, new_value):
     """
     # Convert the array into an array of type CPointer
     ptr = arr.ctypes
-    old = atomic_xchg(ptr, new_value)
+    old = _atomic_xchg(ptr, new_value)
     return old
 
 
 @njit(cache=True)
-def numba_cross(a, b):
+def numba_cross(a: np.ndarray, b: np.ndarray) -> np.ndarray:
     """
     Custom cross product to counter poor performance of numpy cross for single vectors
 
@@ -101,7 +101,9 @@ def numba_cross(a, b):
 
 
 @njit(cache=True)
-def numba_fit_3_points_cylinder(p0, p1, p2, direction):
+def numba_fit_3_points_cylinder(
+    p0: np.ndarray, p1: np.ndarray, p2: np.ndarray, direction: np.ndarray
+) -> tuple[np.ndarray, float, np.ndarray]:
     """
     Determine the cylinder going through 3 points p0,p1 and p2 and whose axis is along direction.
     Note that if direction were not given, 5 points would be required.
@@ -113,13 +115,14 @@ def numba_fit_3_points_cylinder(p0, p1, p2, direction):
         direction (np.array(dtype=np.float64)): Direction to have cylinder axis
 
     Returns:
-
+        center, radius, direction (tuple[np.ndarray, float, np.ndarray]): Respectively
+        the center, the radius and the direction of the cylinder defined with 3 points
     """
 
     try:
         # Normalize direction (if possible)
         n = np.linalg.norm(direction)
-        if numba_close(n, 0):
+        if numba_close(n, 0.0):
             return np.zeros(3, dtype=np.float64), -1.0, np.zeros(3, dtype=np.float64)
 
         direction /= n
@@ -136,7 +139,7 @@ def numba_fit_3_points_cylinder(p0, p1, p2, direction):
         # Direction is with plane (p0,p1,p2)
         s = np.fabs(numba_cross(d10, d20) @ direction)
 
-        if numba_close(s, 0):
+        if numba_close(s, 0.0):
             return np.zeros(3, dtype=np.float64), -1.0, np.zeros(3, dtype=np.float64)
 
         radius = np.sqrt((d10 @ d10) * (d20 @ d20) * (d21 @ d21)) / (2 * s)
@@ -157,7 +160,13 @@ def numba_fit_3_points_cylinder(p0, p1, p2, direction):
 
 
 @njit(cache=True)
-def numba_mark_selected_inliers(p, threshold, center, radius, direction):
+def numba_mark_selected_inliers(
+    p: np.ndarray,
+    threshold: float,
+    center: np.ndarray,
+    radius: float,
+    direction: np.ndarray,
+) -> np.ndarray:
     """
     Compute inliers from a point set p, that lies with threshold distance to the cylinder
 
@@ -177,7 +186,9 @@ def numba_mark_selected_inliers(p, threshold, center, radius, direction):
 
 
 @njit(cache=True)
-def numba_filter_points(p, center, r_min, r_max):
+def numba_filter_points(
+    p: np.ndarray, center: np.ndarray, r_min: float, r_max: float
+) -> np.ndarray:
     """
     Filters points in p to only keep those that at least at r_min distance from center and at most r_max distance from
     center (r_min and r_max excluded)
@@ -199,8 +210,15 @@ def numba_filter_points(p, center, r_min, r_max):
 
 @njit(nogil=True, parallel=True, cache=True)
 def numba_fit_cylinder_ransac(
-    p, axis, nb_test_min, nb_test_max, sufficient_pct_inl, r_min, r_max, err
-):
+    p: np.ndarray,
+    axis: np.ndarray,
+    nb_test_min: int,
+    nb_test_max: int,
+    sufficient_pct_inl: float,
+    r_min: float,
+    r_max: float,
+    err: float,
+) -> tuple[np.ndarray, np.ndarray, float]:
     """
     Fits a cylinder to a set of points using RANSAC, given the direction for the cylinder's axis
     The percentage of inliers might be below pct_inl if nb_test_max is reached.
@@ -217,10 +235,10 @@ def numba_fit_cylinder_ransac(
         err (float): Maximum allowable distance to cylinder for an inlier point
 
     Returns:
-        cylinder: Fitted cylinder
-        np.array(dtype=np.float64): Fitted cylinder's inlier set
+        basis, inliers, pct (tuple[np.ndarray, np.ndarray, float]): Respectively
+        the 3 points that define the best cylinder, its inlier points and the percentage of inliers that it represents
     """
-
+    # np.random.seed(42) # important comment, do not delete (used in jit_compiled_functions_test)
     best_basis = np.empty(shape=(0, 0), dtype=np.float64)
     best_inliers = np.empty(shape=(0, 0), dtype=np.float64)
     best_pct = 0.0
@@ -315,7 +333,7 @@ def numba_fit_cylinder_ransac(
 
 
 @njit(cache=True)
-def numba_close(a, b):
+def numba_close(a: float, b: float) -> bool:
     """
     Numba implementation of math.isclose (numba does not support isclose())
 
@@ -334,7 +352,9 @@ def numba_close(a, b):
 
 
 @njit(cache=True)
-def numba_distance(p, center, radius, direction):
+def numba_distance(
+    p: np.ndarray, center: np.ndarray, radius: float, direction: np.ndarray
+) -> np.ndarray:
     """
     Signed distance to a set of points p. Positive outside the cylinder.
 
@@ -345,7 +365,7 @@ def numba_distance(p, center, radius, direction):
         direction (np.array(dtype=np.float64)): the direction in which the cylinder points
 
     Returns:
-        int: Distance between cylinder's center and the set of points
+        float: Signed distance between a cylinder and a set of points
     """
 
     d = p - center

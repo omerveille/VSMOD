@@ -2,9 +2,7 @@ import numpy as np
 import math
 import scipy.optimize as scopt
 
-from .jit_compiled_functions import numba_cross
 
-from .helper import homogenize
 from .segment import Segment
 
 
@@ -19,7 +17,6 @@ class Cylinder:
         radius=1,
         direction=np.array([0, 0, 1], dtype=np.float64),
         height=-1,
-        name="",
     ):
         """
         Generate a new instance of cylinder.
@@ -36,14 +33,12 @@ class Cylinder:
             direction (np.array(dtype=np.float64), optional): Cylinder's direction.
                                                               Defaults to np.array([0, 0, 1], dtype=np.float64).
             height (int, optional): Cylinder's height. Defaults to -1.
-            name (str, optional): Cylinder's name. Defaults to ''.
         """
 
         self.center = np.asarray(center[0:3], dtype=np.float64)
         self.radius = radius
         self.direction = direction
         self.height = height
-        self.name = str(name)
 
     def copy(self):
         """
@@ -53,9 +48,7 @@ class Cylinder:
             cylinder: Copy of current cylinder
         """
 
-        return Cylinder(
-            self.center, self.radius, self.direction, self.height, self.name
-        )
+        return Cylinder(self.center, self.radius, self.direction, self.height)
 
     @property
     def center(self):
@@ -103,7 +96,7 @@ class Cylinder:
         """
 
         if r <= 0:
-            raise ValueError
+            raise ValueError("A cylinder's radius cannot have a negative length value.")
         else:
             self._radius = r
 
@@ -164,26 +157,6 @@ class Cylinder:
             self._height = -1
         else:
             self._height = h
-
-    def __repr__(self):
-        """
-        Represent cylinder object as a string
-
-        Returns:
-            str: Representation of cylinder object
-        """
-
-        return (
-            f"{self.center[0]} {self.center[1]} {self.center[2]} {self.radius} {self.direction[0]} "
-            f"{self.direction[1]} {self.direction[2]} {self.height}"
-        )
-
-    def display(self):
-        """
-        Show current cylinder's information
-        """
-
-        print(self)
 
     def distance(self, p):
         """
@@ -332,153 +305,6 @@ class Cylinder:
             )
             < r_max2
         )
-
-
-def from_string(s):
-    """
-    Reads cylinder info from a string. Space is used as a separator for the items. There can be between 1 and up
-    to 8 items (if more, only the first 8 items are considered, and the other ones are discarded).
-
-    The stored information is:
-        CenterX CenterY CenterZ Radius DirectionX DirectionY DirectionZ Height
-    (ie inverse of Cylinder.__repr__)
-
-    For example a string with only 2 elements will read the first two coordinates of the center (CenterX and CenterY,
-    CenterZ will be set to 0).
-
-    Default center coordinates are 0
-    Default Radius is 1
-    Default direction is (0,0,1) (also used if given direction is zero length)
-    Default height is -1 (infinite cylinder)
-
-    Args:
-        s (str): Cylinder description
-
-    Returns:
-        cylinder: Cylinder created from its description
-    """
-
-    v = np.fromstring(s, dtype=float, sep=" ")
-
-    if len(v) == 0:
-        return Cylinder()
-    elif len(v) == 1:
-        return Cylinder(center=[v[0], 0, 0])
-    elif len(v) == 2:
-        return Cylinder(center=[v[0], v[1], 0])
-    elif len(v) == 3:
-        return Cylinder(center=v[0:3])
-    elif len(v) == 4:
-        return Cylinder(center=v[0:3], radius=v[3])
-    elif len(v) == 5:
-        return Cylinder(center=v[0:3], radius=v[3], direction=[v[4], 0, 0])
-    elif len(v) == 6:
-        return Cylinder(center=v[0:3], radius=v[3], direction=[v[4], v[5], 0])
-    elif len(v) == 7:
-        return Cylinder(center=v[0:3], radius=v[3], direction=v[4:7])
-    else:
-        return Cylinder(center=v[0:3], radius=v[3], direction=v[4:7], height=v[7])
-
-
-def fit_3_points(p0, p1, p2, direction):
-    """
-    Determine the cylinder going through 3 points p0,p1 and p2 and whose axis is along direction.
-    Note that if direction were not given, 5 points would be required.
-
-    Args:
-        p0 (np.array(dtype=np.float64)): First point to use
-        p1 (np.array(dtype=np.float64)): Second point to use
-        p2 (np.array(dtype=np.float64)): Third point to use
-        direction (np.array(dtype=np.float64)): Direction to have cylinder axis
-
-    Returns:
-        cylinder: The cylinder or None in case of degeneracies (direction is zero-normed, direction is contained in the
-                  plane defined by the 3 points)
-    """
-
-    try:
-        # Normalize direction (if possible)
-        n = np.linalg.norm(direction)
-
-        if math.isclose(n, 0):
-            return None
-
-        direction /= n
-
-        # Remove the component along direction
-        q0 = p0 - (p0 @ direction) * direction
-        q1 = p1 - (p1 @ direction) * direction
-        q2 = p2 - (p2 @ direction) * direction
-
-        d10 = q1 - q0
-        d20 = q2 - q0
-        d21 = q2 - q1
-
-        # Direction is with plane (p0,p1,p2)
-        s = np.fabs(numba_cross(d10, d20) @ direction)
-
-        if math.isclose(s, 0):
-            return None
-
-        radius = np.sqrt((d10 @ d10) * (d20 @ d20) * (d21 @ d21)) / (2 * s)
-
-        m = np.vstack((d10, d20, direction))
-
-        n0 = q0 @ q0
-        n1 = q1 @ q1
-        n2 = q2 @ q2
-
-        b = np.array([0.5 * (n1 - n0), 0.5 * (n2 - n0), 0])
-        c = np.linalg.inv(m) @ b
-
-    except Exception:
-        return None
-
-    return Cylinder(center=c, radius=radius, direction=direction)
-
-
-def change_frame(in_cyl, t):
-    """
-    Change of coordinate frame.
-
-    Args:
-        in_cyl (cylinder): Input cylinder
-        t (np.array(dtype=np.float64)): Transform to apply the change of coordinates
-
-    Returns:
-        cylinder: in_cyl expressed in the new coordinate frame
-    """
-
-    c = homogenize(in_cyl.center) @ t.T[:, :3]
-    d = in_cyl.direction @ t.T[:3, :3]
-
-    return Cylinder(
-        center=c,
-        radius=in_cyl.radius,
-        direction=d,
-        height=in_cyl.height,
-        name=f"{in_cyl.name} (transd)",
-    )
-
-
-def load_branch(f_name):
-    """
-    Returns a list of cylinders read from a file
-
-    Args:
-        f_name (str): File's name containing list of cylinders
-
-    Returns:
-        list: Branch of cylinders
-    """
-
-    ret = []
-
-    with open(f_name) as f:
-        for li in f.readlines():
-            ret.append(from_string(li))
-
-    return ret
 
 
 def dist_to_branch(p, b):

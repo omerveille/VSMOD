@@ -14,6 +14,67 @@ from .branch_tree import BranchTree, TreeColumnRole, Icons
 from .color_palettes import centerline_color, contour_points_color
 
 
+def restore_lists_from_graph(graph: nx.DiGraph):
+    branch_list = []
+    names = []
+    centerlines = []
+    contours_points = []
+    centerline_radius = []
+    edges = []
+    nodes = []
+    markup_list_to_create = []
+    edge_name_table = {0: None}
+
+    for a, b in CustomProgressBar(
+        iterable=graph.edges,
+        quantity_to_measure="branch loaded",
+        windowTitle="Restoring tree architecture...",
+        width=300,
+    ):
+        # Restoring lists
+        branch_list.append(
+            [Cylinder(center=np.array(cp)) for cp in graph[a][b]["centerline"]]
+        )
+        names.append(graph[a][b]["name"])
+        centerlines.append(np.array(graph[a][b]["centerline"]))
+        contours_points.append(graph[a][b]["contour_points"])
+        # Recompute radius
+        centerline_radius.append(
+            [
+                np.linalg.norm(
+                    np.array(graph[a][b]["contour_points"][k])
+                    - np.array(graph[a][b]["centerline"][k]),
+                    axis=1,
+                ).min()
+                for k in range(len(graph[a][b]["centerline"]))
+            ]
+        )
+        edges.append((a, b))
+        markup_list_to_create.append(
+            (
+                graph[a][b]["name"],
+                np.array(graph[a][b]["centerline"]),
+                graph[a][b]["contour_points"],
+            )
+        )
+        edge_name_table[b] = graph[a][b]["name"]
+
+    for node in graph.nodes(data=True):
+        nodes.append(node[1]["pos"])
+
+    return (
+        branch_list,
+        names,
+        centerlines,
+        contours_points,
+        centerline_radius,
+        edges,
+        nodes,
+        markup_list_to_create,
+        edge_name_table,
+    )
+
+
 class GraphBranches:
     """
     Class which hold the graph of all the vessels segmented.
@@ -32,7 +93,7 @@ class GraphBranches:
         lock_button,
     ) -> None:
         self.branch_list = []  # list of shape (n,m) with n = number of branches and m = number of cylinder in the current branch
-        self.nodes = []  # list of nodes which are the birfucation + root + leafs
+        self.nodes = []  # list of nodes which are the birfucation + root + leaves
         self.edges = []  # list of tuple for edges between nodes
         self.names = []  # list of names in each edges
         self.centerlines: list[
@@ -306,6 +367,46 @@ class GraphBranches:
             f"The graph has been successfully exported to :\n{folder_path}",
             windowTitle="Success",
         )
+
+    def load_branches_from_graph(self, graph: nx.DiGraph):
+        """
+        Restore the branch contained in a networkx digraph file.
+        Make sure the tree has been cleared BEFORE calling this function.
+
+        Parameters
+        ----------
+
+        graph : graph containing information that can be loading into an empty graph_branch tree.
+        """
+        with slicer.util.tryWithErrorDisplay(
+            "Failed to restore tree architecture.", waitCursor=True
+        ):
+            (
+                self.branch_list,
+                self.names,
+                self.centerlines,
+                self.contours_points,
+                self.centerline_radius,
+                self.edges,
+                self.nodes,
+                markup_list_to_create,
+                edge_name_table,
+            ) = restore_lists_from_graph(graph)
+
+            for args in CustomProgressBar(
+                iterable=markup_list_to_create,
+                quantity_to_measure="branch added",
+                windowTitle="Restoring tree architecture...",
+                width=300,
+            ):
+                self.create_new_markups(*args)
+
+            for a, b in nx.edge_dfs(graph):
+                current_edge_name = graph[a][b]["name"]
+                parent_edge_name = edge_name_table[a]
+                self.tree_widget.insertAfterNode(
+                    nodeId=current_edge_name, parentNodeId=parent_edge_name
+                )
 
     def clear_all(self) -> bool:
         """

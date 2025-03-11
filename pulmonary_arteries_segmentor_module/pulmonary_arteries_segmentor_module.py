@@ -9,7 +9,6 @@ import slicer.util
 import vtk
 import json
 from math import radians
-from scipy.ndimage import spline_filter
 
 from slicer import (
     vtkMRMLScalarVolumeNode,
@@ -37,26 +36,27 @@ except ImportError:
 
 # Recursive reload, when you hit the "reload" button in 3D slicer, force all submodules to be reloaded (which is not the case by default).
 try:
-    to_reload = [key for key in sys.modules.keys() if "ransac_slicer." in key]
+    to_reload = [key for key in sys.modules.keys() if key.startswith("ransac_slicer")]
+    to_reload.sort(key=len, reverse=True)
     for file_to_reload in to_reload:
         sys.modules[file_to_reload] = importlib.reload(sys.modules[file_to_reload])
 except Exception as e:
     print(f"Exception occurred while reloading\n{e}")
 
-from ransac_slicer.cylinder import Cylinder
+from ransac_slicer.dependencies_checker import check_and_install_missing_dependencies
 from ransac_slicer.ransac import run_ransac
 from ransac_slicer.graph_branches import GraphBranches
 from ransac_slicer.branch_tree import BranchTree, TreeColumnRole, Icons
 from ransac_slicer.color_palettes import direction_points_color
 from ransac_slicer.popup_utils import (
-    CustomProgressBar,
     CustomStatusDialog,
 )
 from ransac_slicer.volume import Volume
-from ransac_slicer.region_growing_seeds import paint_segments
+from ransac_slicer.region_growing_seeds import paint_segments, _compute_draw_order
 from ransac_slicer.jit_compiled_functions import numba_close
 
 from networkx.readwrite import json_graph
+from scipy.ndimage import spline_filter
 import networkx as nx
 
 #
@@ -171,6 +171,24 @@ class pulmonary_arteries_segmentor_moduleWidget(
         """
         ScriptedLoadableModuleWidget.setup(self)
 
+        # Check slicer version
+        slicer_version = (
+            slicer.app.majorVersion,
+            slicer.app.minorVersion,
+            float(slicer.app.revision),
+        )
+        if slicer_version < (5, 8, 0):
+            error_msg = (
+                "This plugin is only compatible for slicer version superior to 5.8.0.\n"
+                "Please download the latest Slicer version to use this plugin."
+            )
+            self.layout.addWidget(qt.QLabel(error_msg))
+            self.layout.addStretch()
+            slicer.util.errorDisplay(error_msg)
+            return
+
+        check_and_install_missing_dependencies()
+
         # Load widget from .ui file (created by Qt Designer).
         # Additional widgets can be instantiated manually and added to self.layout.
         uiWidget = slicer.util.loadUI(
@@ -282,7 +300,8 @@ class pulmonary_arteries_segmentor_moduleWidget(
         Called each time the user opens this module.
         """
         # Make sure parameter node exists and observed
-        self.initializeParameterNode()
+        if hasattr(self, "logic") and self.logic is not None:
+            self.initializeParameterNode()
 
     def exit(self) -> None:
         """
@@ -730,7 +749,7 @@ class pulmonary_arteries_segmentor_moduleWidget(
 
         if measuring_node.GetNumberOfControlPoints() == 2:
             distance = measuring_node.GetLineLengthWorld()
-            if numba_close(distance, 0):
+            if numba_close(distance, 0.0):
                 distance = 0.2
             self.parameterNode.startingRadius = distance / 2
 
@@ -830,43 +849,32 @@ class pulmonary_arteries_segmentor_moduleWidget(
         with slicer.util.tryWithErrorDisplay(
             "Failed to compute segmentation.", waitCursor=True
         ):
-            if (
+            # Get the currently selected segmentation node of the segment editor widget
+            selected_segmentation = self.ui.SegmentEditorWidget.segmentationNode()
+
+            if selected_segmentation is not None:
+                self.segmentationNode = selected_segmentation
+            elif (
                 self.segmentationNode is None
                 or self.segmentationNode.GetScene() is None
             ):
                 self.segmentationNode = slicer.mrmlScene.AddNewNodeByClass(
                     "vtkMRMLSegmentationNode"
                 )
-                self.nodeDeletionObserverTag = slicer.mrmlScene.AddObserver(
-                    slicer.vtkMRMLScene.NodeAboutToBeRemovedEvent,
-                    self.checkCanStartSegmentation,
-                )
-                self.segmentationNode.SetReferenceImageGeometryParameterFromVolumeNode(
-                    self.parameterNode.inputVolume
-                )
-
                 self.segmentationNode.SetName("Segmentation")
-                self.segmentationNode.CreateDefaultDisplayNodes()
+
+            self.segmentationNode.SetReferenceImageGeometryParameterFromVolumeNode(
+                self.parameterNode.inputVolume
+            )
+            self.segmentationNode.CreateDefaultDisplayNodes()
 
             # We do pause the tracking of segmentation deletion
             slicer.mrmlScene.RemoveObserver(self.nodeDeletionObserverTag)
             self.nodeDeletionObserverTag = None
 
-            # Compute branch drawing order, we draw in reverse bfs order, so that parent branches are always drawn on top of childs
-            G = nx.DiGraph()
-            for i, node in enumerate(self.graph_branches.nodes):
-                G.add_node(i, pos=node)
-
-            for i, edge in enumerate(self.graph_branches.edges):
-                G.add_edge(
-                    edge[0],
-                    edge[1],
-                    edge_idx=i,
-                )
-            branch_draw_order = [
-                G[a][b]["edge_idx"] for a, b in nx.bfs_edges(G, source=0)
-            ][::-1]
-            del G
+            branch_draw_order = _compute_draw_order(
+                self.graph_branches.nodes, self.graph_branches.edges
+            )
 
             # Create the segments and paint them
             paint_segments(
@@ -882,8 +890,17 @@ class pulmonary_arteries_segmentor_moduleWidget(
                 self.parameterNode.mergeAllVessels,
             )
 
+            # Remove segmentation from the UI
+            self.ui.SegmentEditorWidget.setSegmentationNode(None)
+            # Remove volume node from the UI
+            self.ui.SegmentEditorWidget.setSourceVolumeNode(None)
+
             # Set the current segmentation into the UI
             self.ui.SegmentEditorWidget.setSegmentationNode(self.segmentationNode)
+            # Set the current volume into the UI
+            self.ui.SegmentEditorWidget.setSourceVolumeNode(
+                self.parameterNode.inputVolume
+            )
 
             # Hide markup nodes
             for branch in (
@@ -955,59 +972,11 @@ class pulmonary_arteries_segmentor_moduleWidget(
             self.checkCanStartSegmentation()
             self.checkCanStartRansac()
 
-        with slicer.util.tryWithErrorDisplay(
-            "Failed to restore tree architecture.", waitCursor=True
-        ):
-            edge_name_table = {0: None}
+        self.graph_branches.load_branches_from_graph(graph)
 
-            for a, b in CustomProgressBar(
-                iterable=graph.edges,
-                quantity_to_measure="branch loaded",
-                windowTitle="Restoring tree architecture...",
-                width=300,
-            ):
-                # Restoring lists
-                self.graph_branches.branch_list.append(
-                    [Cylinder(center=np.array(cp)) for cp in graph[a][b]["centerline"]]
-                )
-                self.graph_branches.names.append(graph[a][b]["name"])
-                self.graph_branches.centerlines.append(
-                    np.array(graph[a][b]["centerline"])
-                )
-                self.graph_branches.contours_points.append(
-                    graph[a][b]["contour_points"]
-                )
-                # Recompute radius
-                self.graph_branches.centerline_radius.append(
-                    [
-                        np.linalg.norm(
-                            np.array(graph[a][b]["contour_points"][k])
-                            - np.array(graph[a][b]["centerline"][k]),
-                            axis=1,
-                        ).min()
-                        for k in range(len(graph[a][b]["centerline"]))
-                    ]
-                )
-                self.graph_branches.edges.append((a, b))
-                self.graph_branches.create_new_markups(
-                    graph[a][b]["name"],
-                    np.array(graph[a][b]["centerline"]),
-                    graph[a][b]["contour_points"],
-                )
-                edge_name_table[b] = graph[a][b]["name"]
-
-            for node in graph.nodes(data=True):
-                self.graph_branches.nodes.append(node[1]["pos"])
-
-            for a, b in nx.edge_dfs(graph):
-                current_edge_name = graph[a][b]["name"]
-                parent_edge_name = edge_name_table[a]
-                self.graph_branches.tree_widget.insertAfterNode(
-                    nodeId=current_edge_name, parentNodeId=parent_edge_name
-                )
-            self.checkCanStartRansac()
-            self.checkCanStartSegmentation()
-            self.recenter3dView()
+        self.checkCanStartRansac()
+        self.checkCanStartSegmentation()
+        self.recenter3dView()
 
 
 #
@@ -1146,47 +1115,64 @@ class pulmonary_arteries_segmentor_moduleTest(ScriptedLoadableModuleTest):
     https://github.com/Slicer/Slicer/blob/main/Base/Python/slicer/ScriptedLoadableModule.py
     """
 
-    def setUp(self):
-        slicer.mrmlScene.Clear()
-
     def runTest(self):
         import unittest
+
+        try:
+            to_reload = [
+                key for key in sys.modules.keys() if key.startswith("module_tests")
+            ]
+            to_reload.sort(key=len, reverse=True)
+            # We reload this module first because the other test may depend on it
+            for file_to_reload in to_reload:
+                sys.modules[file_to_reload] = importlib.reload(
+                    sys.modules[file_to_reload]
+                )
+        except Exception as e:
+            print(f"Exception occurred while reloading\n{e}")
+
         from module_tests import (
-            BranchTreeTest,
-            CylinderRansacTest,
+            Branch_treeTest,
             CylinderTest,
-            EndToEndTest,
-            GraphBranchTest,
+            Cylinder_ransacTest,
+            Graph_branchesTest,
             HelperTest,
             JitCompiledFunctionsTest,
-            PopupUtilsTest,
             RansacTest,
-            RegionGrowingSeedsTest,
-            SegmentTests,
-            SegmentationUtilsTest,
+            SegmentTest,
             VolumeTest,
         )
 
-        self.setUp()
-
         testCases = [
-            BranchTreeTest,
-            CylinderRansacTest,
-            CylinderTest,
-            EndToEndTest,
-            GraphBranchTest,
+            # DependenciesInstallationTest,
             HelperTest,
-            JitCompiledFunctionsTest,
-            PopupUtilsTest,
-            RansacTest,
-            RegionGrowingSeedsTest,
-            SegmentTests,
-            SegmentationUtilsTest,
             VolumeTest,
+            SegmentTest,
+            JitCompiledFunctionsTest,
+            Branch_treeTest,
+            CylinderTest,
+            Cylinder_ransacTest,
+            Graph_branchesTest,
+            # RegionGrowingSeedsTest,
+            RansacTest,
         ]
 
         suite = unittest.TestSuite(
             [unittest.TestLoader().loadTestsFromTestCase(case) for case in testCases]
         )
-        unittest.TextTestRunner(verbosity=3).run(suite)
+        test_results = unittest.TextTestRunner(verbosity=3).run(suite)
         slicer.mrmlScene.Clear()
+
+        summary = f"""
+Total tests run: {test_results.testsRun}
+Failures: {len(test_results.failures)}
+Errors: {len(test_results.errors)}
+Skipped: {len(getattr(test_results, 'skipped', []))}
+Expected Failures: {len(getattr(test_results, 'expectedFailures', []))}
+Unexpected Successes: {len(getattr(test_results, 'unexpectedSuccesses', []))}
+
+Overall result: {"OK" if not test_results.failures and not test_results.errors else "FAILED, open the python console for more details."}
+"""
+
+        slicer.util.infoDisplay(text=summary, windowTitle="Tests results")
+        slicer.app.processEvents()

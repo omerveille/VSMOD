@@ -1,7 +1,44 @@
 from typing import Union
+from itertools import count
 import qt
 
-from .segmentation_utils import Signal, Icons
+
+class Icons:
+    """Object responsible for the different icons in the module. The module doesn't have any icons internally but pulls
+    icons from slicer and the other modules.
+    """
+
+    toggleVisibility = qt.QIcon(":/Icons/VisibleOrInvisible.png")
+    visibleOn = qt.QIcon(":/Icons/VisibleOn.png")
+    visibleOff = qt.QIcon(":/Icons/VisibleOff.png")
+    delete = qt.QIcon(":/Icons/SnapshotDelete.png")
+
+
+class Signal:
+    """Qt like signal slot connections. Enables using the same semantics with Slicer as qt.Signal lead to application
+    crash.
+    (see : https://discourse.slicer.org/t/custom-signal-slots-with-pythonqt/3278/5)
+    """
+
+    def __init__(self, *typeInfo):
+        self._id = count(0, 1)
+        self._connectDict = {}
+        self._typeInfo = str(typeInfo)
+
+    def emit(self, *args, **kwargs):
+        for slot in self._connectDict.values():
+            slot(*args, **kwargs)
+
+    def connect(self, slot):
+        nextId = next(self._id)
+        self._connectDict[nextId] = slot
+        return nextId
+
+    def disconnect(self, connectId):
+        if connectId in self._connectDict:
+            del self._connectDict[connectId]
+            return True
+        return False
 
 
 class TreeColumnRole:

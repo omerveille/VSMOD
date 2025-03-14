@@ -500,7 +500,7 @@ def sample_around_cylinder(vol, cyl, cfg):
             err_threshold,
         )
         if numba_close(p_inl, 0.0):
-            return None, None
+            return None
 
         c = cylinder.Cylinder(
             *numba_fit_3_points_cylinder(c_basis[0], c_basis[1], c_basis[2], axis)

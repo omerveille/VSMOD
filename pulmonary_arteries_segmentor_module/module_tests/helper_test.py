@@ -39,7 +39,7 @@ class HelperTest(unittest.TestCase):
         # generate a fake timer file
         timers_cpy = deepcopy(timers)
         flushed_file_path = flush_timers()
-        self.addCleanup(lambda: self.delete_test_file(flushed_file_path))
+        self.addCleanup(self.delete_test_file, flushed_file_path)
 
         # compare file content vs the timers in memory
         file_content = None

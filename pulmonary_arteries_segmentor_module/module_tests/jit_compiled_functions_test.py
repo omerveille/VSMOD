@@ -19,7 +19,7 @@ from ransac_slicer.jit_compiled_functions import (
     numba_random_indices,
     numba_fit_cylinder_ransac,
 )
-from .test_utils import generate_points
+from .test_utils import generate_points, get_resources_path, load_object_from_path
 
 
 class JitCompiledFunctionsTest(unittest.TestCase):
@@ -185,7 +185,7 @@ class JitCompiledFunctionsTest(unittest.TestCase):
         function_name = f"numba_fit_cylinder_ransac_{salt}"
         function_file_path = Path(__file__).parent.joinpath(f"{filename}.py").absolute()
 
-        self.addCleanup(lambda: self.delete_test_file(function_file_path))
+        self.addCleanup(self.delete_test_file, function_file_path)
         function_source_code = inspect.getsource(numba_fit_cylinder_ransac)
         # Replace the decorator in order to make the function outputs reproductible
         function_source_code = function_source_code.replace(
@@ -218,22 +218,21 @@ from numba import njit, prange
 
         spec = importlib.util.spec_from_file_location(filename, function_file_path)
         module = importlib.util.module_from_spec(spec)
-        self.addCleanup(lambda: self.clean_module_after_test(module.__name__))
+        self.addCleanup(self.clean_module_after_test, module.__name__)
         spec.loader.exec_module(module)
 
         reproductible_numba_fit_cylinder_ransac: numba_fit_cylinder_ransac = getattr(
             module, function_name
         )
 
-        ressource_test_dir = (
-            Path(__file__)
-            .parent.parent.joinpath("Resources")
-            .joinpath("Test")
-            .absolute()
-        )
+        ressource_test_dir = get_resources_path()
 
-        p = np.load(ressource_test_dir.joinpath("p.npy"))
-        axis = np.load(ressource_test_dir.joinpath("axis.npy"))
+        p = load_object_from_path(
+            ressource_test_dir.joinpath("jit_compiled_functions").joinpath("p.npy")
+        )
+        axis = load_object_from_path(
+            ressource_test_dir.joinpath("jit_compiled_functions").joinpath("axis.npy")
+        )
 
         # Test using previously known data
         basis, inlier, percent = reproductible_numba_fit_cylinder_ransac(
@@ -247,8 +246,16 @@ from numba import njit, prange
             err=0.324,
         )
 
-        expected_basis = np.load(ressource_test_dir.joinpath("expected_basis.npy"))
-        expected_inlier = np.load(ressource_test_dir.joinpath("expected_inlier.npy"))
+        expected_basis = load_object_from_path(
+            ressource_test_dir.joinpath("jit_compiled_functions").joinpath(
+                "expected_basis.npy"
+            )
+        )
+        expected_inlier = load_object_from_path(
+            ressource_test_dir.joinpath("jit_compiled_functions").joinpath(
+                "expected_inlier.npy"
+            )
+        )
         expected_inlier_pct = 0.8090909090909091
 
         assert_array_almost_equal(basis, expected_basis)

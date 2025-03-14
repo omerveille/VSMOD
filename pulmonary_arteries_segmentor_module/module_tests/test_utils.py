@@ -1,6 +1,9 @@
 import io
 import sys
 from contextlib import contextmanager
+from pathlib import Path
+import slicer
+import pickle
 
 import numpy as np
 
@@ -8,7 +11,7 @@ import numpy as np
 @contextmanager
 def mute_outputs():
     """
-    With context that temporare mute stdout and stderr.
+    With context that temporary mute stdout and stderr.
     """
     saved_stdout = sys.stdout
     saved_stderr = sys.stderr
@@ -39,3 +42,19 @@ def generate_points(
     z = np.random.uniform(*z_range, number_of_points)
 
     return np.column_stack((x, y, z)), center, radius, direction
+
+
+def get_resources_path() -> Path:
+    return (
+        Path(__file__).parent.parent.joinpath("Resources").joinpath("Test").absolute()
+    )
+
+
+def load_object_from_path(path: Path) -> object:
+    if path.name.endswith(".npy"):
+        return np.load(path)
+    if path.name.endswith(".pickle"):
+        with open(path, "rb") as f:
+            return pickle.load(f)
+    else:
+        return slicer.util.loadVolume(str(path))

@@ -1135,16 +1135,18 @@ class pulmonary_arteries_segmentor_moduleTest(ScriptedLoadableModuleTest):
             Branch_treeTest,
             CylinderTest,
             Cylinder_ransacTest,
+            DependenciesInstallationTest,
             Graph_branchesTest,
             HelperTest,
             JitCompiledFunctionsTest,
             RansacTest,
+            RegionGrowingSeedsTest,
             SegmentTest,
             VolumeTest,
         )
 
         testCases = [
-            # DependenciesInstallationTest,
+            DependenciesInstallationTest,
             HelperTest,
             VolumeTest,
             SegmentTest,
@@ -1153,7 +1155,7 @@ class pulmonary_arteries_segmentor_moduleTest(ScriptedLoadableModuleTest):
             CylinderTest,
             Cylinder_ransacTest,
             Graph_branchesTest,
-            # RegionGrowingSeedsTest,
+            RegionGrowingSeedsTest,
             RansacTest,
         ]
 

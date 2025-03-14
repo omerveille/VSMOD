@@ -1,6 +1,7 @@
 import numpy as np
 import math
 import scipy.optimize as scopt
+from math import isclose
 
 
 from .segment import Segment
@@ -13,10 +14,10 @@ class Cylinder:
 
     def __init__(
         self,
-        center=np.array([0, 0, 0], dtype=np.float64),
-        radius=1,
-        direction=np.array([0, 0, 1], dtype=np.float64),
-        height=-1,
+        center: np.ndarray = np.array([0, 0, 0], dtype=np.float64),
+        radius: float = 1,
+        direction: np.ndarray = np.array([0, 0, 1], dtype=np.float64),
+        height: float = -1,
     ):
         """
         Generate a new instance of cylinder.
@@ -35,10 +36,24 @@ class Cylinder:
             height (int, optional): Cylinder's height. Defaults to -1.
         """
 
-        self.center = np.asarray(center[0:3], dtype=np.float64)
-        self.radius = radius
-        self.direction = direction
-        self.height = height
+        self.center: np.ndarray = np.asarray(center[0:3], dtype=np.float64)
+        self.radius: float = radius
+        self.direction: np.ndarray = direction
+        self.height: float = height
+
+    def __eq__(self, other_cyl: object) -> bool:
+        if type(self) is not type(other_cyl):
+            return False
+
+        return (
+            np.allclose(self.center, other_cyl.center)
+            and isclose(self.radius, other_cyl.radius)
+            and np.allclose(self.direction, other_cyl.direction)
+            and isclose(self.height, other_cyl.height)
+        )
+
+    def __str__(self) -> str:
+        return f"Cylinder= center:{self.center.tolist()}|radius: {self.radius}|direction:{self.direction.tolist()}| height:{self.height}"
 
     def copy(self):
         """

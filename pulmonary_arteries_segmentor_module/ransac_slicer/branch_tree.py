@@ -103,7 +103,7 @@ class BranchTree(qt.QTreeWidget):
         self._branchDict = {}
 
         # Configure tree widget
-        self.setColumnCount(3)
+        self.setColumnCount(4)
         self.setHeaderLabels(["Branch Name", " Center", " Contour", ""])
 
         # Configure tree to have first section stretched and last sections to be at right of the layout
@@ -158,14 +158,6 @@ class BranchTree(qt.QTreeWidget):
         """
         return self.getParentNodeId(nodeId) is None
 
-    def dropEvent(self, event):
-        """
-        On drop event, enforce structure of the tree is not broken.
-        """
-        qt.QTreeWidget.dropEvent(self, event)
-        self.enforceOneRoot()
-        self.itemDropped.emit()
-
     def keyPressEvent(self, event):
         """Overridden from qt.QTreeWidget to notify listeners of key event
 
@@ -175,8 +167,6 @@ class BranchTree(qt.QTreeWidget):
         """
         if self.currentItem():
             self.keyPressed.emit(self.currentItem(), event.key())
-
-        qt.QTreeWidget.keyPressEvent(self, event)
 
     def onContextMenu(self, position):
         """
@@ -236,7 +226,9 @@ class BranchTree(qt.QTreeWidget):
         self.editItem(item, 0)
 
     def _takeItem(self, nodeId):
-        """Remove item with given item id from the tree. Removes it from its parent if necessary"""
+        """
+        Remove item with given item id from the tree. Removes it from its parent if necessary
+        """
         if nodeId is None:
             return None
         elif nodeId in self._branchDict:
@@ -338,7 +330,9 @@ class BranchTree(qt.QTreeWidget):
             return True
 
     def _removeIntermediateItem(self, nodeItem, nodeId):
-        """Move each child of node to node parent and remove item."""
+        """
+        Move each child of node to node parent and remove item.
+        """
         parentItem = nodeItem.parent()
         parentItem.takeChild(parentItem.indexOfChild(nodeItem))
         for child in nodeItem.takeChildren():

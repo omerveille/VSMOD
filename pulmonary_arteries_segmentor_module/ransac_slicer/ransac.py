@@ -33,10 +33,10 @@ def interpolate_point(
     ----------
 
     list[np.ndarray]
-    A list of center points.
+        A list of center points interpolated inbetween cyl_0 and cyl_1, both excluded.
 
     list[list[np.ndarray]]
-    A list of contours points, each center point has its list of contours.
+        A list of contours points, each center point has its list of contours.
     """
     direction = cyl_1.center - cyl_0.center
     radius_diff = cyl_1.radius - cyl_0.radius
@@ -136,8 +136,8 @@ def run_ransac(
     starting_point: np.ndarray,
     direction_point: np.ndarray,
     starting_radius: float,
-    percent_inlier_points: int,
-    inlier_threshold: int,
+    percent_inlier_points: float,
+    inlier_threshold: float,
     centerline_resolution: float,
     maximum_turn_angle: float,
     min_number_of_attempts: int,

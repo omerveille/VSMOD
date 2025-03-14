@@ -8,13 +8,27 @@ from .popup_utils import CustomProgressBar
 from datetime import datetime
 import slicer
 import qt
-import os
+from pathlib import Path
 from .cylinder import Cylinder
 from .branch_tree import BranchTree, TreeColumnRole, Icons
 from .color_palettes import centerline_color, contour_points_color
 
 
 def restore_lists_from_graph(graph: nx.DiGraph):
+    """
+    Extract all the necessary lists to load a saved tree architecture into a GraphBranches object.
+
+    Parameters
+        ----------
+
+        graph: nx.DiGraph
+            A DiGraph loaded from a file, which represent a saved tree architecture.
+
+        Returns
+        ----------
+
+        All the lists necessary to regenerate the tree architecture in the UI.
+    """
     branch_list = []
     names = []
     centerlines = []
@@ -316,16 +330,37 @@ class GraphBranches:
             idx_cyl : idx_cyl + 1
         ], contour_points[idx_cyl : idx_cyl + 1]
 
-    def save_networkX(self):
+    def save_networkX(
+        self, forced_path: Union[None, Path] = None, show_success_window: bool = True
+    ) -> Union[None, str]:
         """
         Save the graph created as a networkx .JSON and .pickle file if the user select a valid directory.
+
+        Parameters
+        ----------
+        forced_path : Union[None, Path]
+            Path used to save the networkx graph, override the UI decision and does not make it appears if set.
+            None by default.
+
+        show_success_window : bool
+          Wether to show a message in case of a successful save (disabled while testing).
+
+        Returns
+        -------
+        Union[None, str]
+          None if the user did not enter a folder path, otherwise returns the name of the saved file.
         """
-        dialog = qt.QFileDialog()
-        folder_path = dialog.getExistingDirectory(None, "Choose a folder")
+        if forced_path is not None:
+            folder_path = forced_path
+        else:
+            dialog = qt.QFileDialog()
+            folder_path = dialog.getExistingDirectory(None, "Choose a folder")
 
         # cancel any action if the user cancel / close the window / press escape
         if not folder_path:
             return
+
+        folder_path = Path(folder_path)
 
         # Create graph Network X with node = bifurcation and edges = branches
         branch_graph = nx.DiGraph()
@@ -344,7 +379,7 @@ class GraphBranches:
         filename = f"graph_tree_{datetime.now().strftime('%Y-%m-%d_%H:%M:%S')}"
 
         # save with pickle
-        with open(os.path.join(folder_path, f"{filename}.pickle"), "wb") as f:
+        with open(folder_path.joinpath(f"{filename}.pickle"), "wb") as f:
             pickle.dump(branch_graph, f, pickle.HIGHEST_PROTOCOL)
 
         def ndarray_to_list(data):
@@ -360,13 +395,15 @@ class GraphBranches:
         # save to JSON
         data = json_graph.node_link_data(branch_graph)
         data_list = ndarray_to_list(data)
-        with open(os.path.join(folder_path, f"{filename}.json"), "w") as outfile:
+        with open(folder_path.joinpath(f"{filename}.json"), "w") as outfile:
             json.dump(data_list, outfile, indent=4)
 
-        slicer.util.infoDisplay(
-            f"The graph has been successfully exported to :\n{folder_path}",
-            windowTitle="Success",
-        )
+        if show_success_window:
+            slicer.util.infoDisplay(
+                f"The graph has been successfully exported to :\n{folder_path}",
+                windowTitle="Success",
+            )
+        return filename
 
     def load_branches_from_graph(self, graph: nx.DiGraph):
         """
@@ -376,7 +413,8 @@ class GraphBranches:
         Parameters
         ----------
 
-        graph : graph containing information that can be loading into an empty graph_branch tree.
+        graph :
+            Graph containing information that can be loading into an empty graph_branch tree.
         """
         with slicer.util.tryWithErrorDisplay(
             "Failed to restore tree architecture.", waitCursor=True
@@ -408,23 +446,31 @@ class GraphBranches:
                     nodeId=current_edge_name, parentNodeId=parent_edge_name
                 )
 
-    def clear_all(self) -> bool:
+    def clear_all(self, auto_confirm: bool = False) -> bool:
         """
         Clear the whole graph after confirmation.
+
+        Parameters
+        ----------
+        auto_confirm :
+            If set to True, allows deletion without UI confirmation.
+            False by default.
 
         Returns
         ----------
 
         True if the whole graph has been deleted else False.
         """
-        msg = qt.QMessageBox()
-        msg.setIcon(qt.QMessageBox.Warning)
-        msg.setWindowTitle("Confirmation")
-        msg.setText("Are you sure you want to clear the tree ?")
-        msg.setStandardButtons(qt.QMessageBox.Yes | qt.QMessageBox.No)
 
-        if msg.exec_() != qt.QMessageBox.Yes:
-            return False
+        if not auto_confirm:
+            msg = qt.QMessageBox()
+            msg.setIcon(qt.QMessageBox.Warning)
+            msg.setWindowTitle("Confirmation")
+            msg.setText("Are you sure you want to clear the tree ?")
+            msg.setStandardButtons(qt.QMessageBox.Yes | qt.QMessageBox.No)
+
+            if msg.exec_() != qt.QMessageBox.Yes:
+                return False
 
         self.branch_list = []
         self.nodes = []
@@ -586,11 +632,20 @@ class GraphBranches:
         node_id = treeItem.nodeId
         branch_id = self.names.index(node_id)
         branch_selected, branch_node_id = self.node_selected
+
+        if branch_selected == -1:
+            msg = qt.QMessageBox()
+            msg.setIcon(qt.QMessageBox.Critical)
+            msg.setWindowTitle("Error")
+            msg.setText("No node selected.")
+            msg.exec_()
+            return
+
         if branch_id != branch_selected:
             msg = qt.QMessageBox()
             msg.setIcon(qt.QMessageBox.Critical)
             msg.setWindowTitle("Error")
-            msg.setText("No node selected or not in the good branch")
+            msg.setText("The node selected do not belong to this branch.")
             msg.exec_()
             return
 

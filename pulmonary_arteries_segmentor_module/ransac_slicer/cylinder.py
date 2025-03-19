@@ -173,7 +173,7 @@ class Cylinder:
         else:
             self._height = h
 
-    def distance(self, p):
+    def signed_distance(self, p):
         """
         Signed distance to a set of points p. Positive outside the cylinder.
 
@@ -183,7 +183,18 @@ class Cylinder:
         Returns:
             int: Distance between cylinder's center and the set of points
         """
+        return self.distance(p) - self.radius
 
+    def distance(self, p):
+        """
+        Distance to a set of points p.
+
+        Args:
+            p (np.array(dtype=np.float64)): Nx3 array containing set of points
+
+        Returns:
+            int: Distance between cylinder's center and the set of points
+        """
         if len(p.shape) == 1:
             pa = p.reshape((1, 3))
         else:
@@ -205,9 +216,9 @@ class Cylinder:
         dist = np.sqrt(dist_to_axis)
 
         if len(p.shape) == 1:
-            return dist[0] - self.radius
+            return dist[0]
 
-        return dist - self.radius
+        return dist
 
     def select_inliers(self, p, threshold):
         """
@@ -221,7 +232,7 @@ class Cylinder:
             (np.array(dtype=np.float64)): Inlier points selected
         """
 
-        d = np.fabs(self.distance(p))
+        d = np.fabs(self.signed_distance(p))
         i = np.where(d < threshold)
 
         return p[i]
@@ -282,7 +293,7 @@ class Cylinder:
 
         def residue(param):
             cyl = param_to_cyl(param)
-            d = cyl.distance(inliers)
+            d = cyl.signed_distance(inliers)
 
             return d @ d / inliers.shape[0]
 

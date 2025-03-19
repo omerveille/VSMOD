@@ -131,6 +131,7 @@ class GraphBranches:
             "itemClicked(QTreeWidgetItem *, int)", self.on_item_clicked
         )
         self.tree_widget.itemRenamed.connect(self.on_item_renamed)
+        self.tree_widget.itemRemoveBegin.connect(self.on_remove_begin)
         self.tree_widget.itemRemoveEnd.connect(self.on_remove_end)
         self.tree_widget.itemDeleted.connect(self.on_delete_item)
         self.tree_widget.keyPressed.connect(self.on_key_pressed)
@@ -233,9 +234,34 @@ class GraphBranches:
         if not isFromSplitBranch:
             self.on_merge_only_child(parent_node)
 
-    def update_parent_branch(self, branch_idx: int, node_idx: int):
+    def truncate_branch_begin(self, branch_idx: int, node_idx: int):
         """
-        Update the graph when a split occurs.
+        Truncate the beginning of a branch, deleting node before a certain index.
+
+        Parameters
+        ----------
+
+        branch_idx: index of the branch updated.
+        node_idx: index of the last point of the branch.
+        """
+        self.branch_list[branch_idx] = self.branch_list[branch_idx][node_idx:]
+        self.centerlines[branch_idx] = self.centerlines[branch_idx][node_idx:]
+        self.contours_points[branch_idx] = self.contours_points[branch_idx][node_idx:]
+        self.centerline_radius[branch_idx] = self.centerline_radius[branch_idx][
+            node_idx:
+        ]
+
+        slicer.util.updateMarkupsControlPointsFromArray(
+            self.centerline_markups[branch_idx], self.centerlines[branch_idx]
+        )
+        slicer.util.updateMarkupsControlPointsFromArray(
+            self.contour_points_markups[branch_idx],
+            np.array([elt for pts in self.contours_points[branch_idx] for elt in pts]),
+        )
+
+    def truncate_branch_end(self, branch_idx: int, node_idx: int):
+        """
+        Truncate the end of a branch, deleting node after a certain index.
 
         Parameters
         ----------
@@ -309,7 +335,7 @@ class GraphBranches:
         centerline = self.centerlines[idx_branch]
         contour_points = self.contours_points[idx_branch]
         centerline_radius = self.centerline_radius[idx_branch]
-        self.update_parent_branch(idx_branch, idx_cyl + 1)
+        self.truncate_branch_end(idx_branch, idx_cyl + 1)
 
         # Update edges
         self.nodes.append(centerline[idx_cyl])
@@ -617,12 +643,50 @@ class GraphBranches:
             self.node_selected = (branch_id, node_id)
 
             tree_item = self.tree_widget.getTreeWidgetItem(branch_name)
+            self.tree_widget.lastItemSelectInScene = tree_item
             self.tree_widget.scrollToItem(tree_item)
             self.tree_widget.setCurrentItem(tree_item)
 
-    def on_remove_end(self, treeItem):
+    def on_remove_begin(self, treeItem):
         """
         Callback function when the user choose to delete the end of a branch.
+
+        Parameters
+        ----------
+
+        treeItem: tree item in which the user wants to delete the end.
+        """
+
+        node_id = treeItem.nodeId
+        branch_id = self.names.index(node_id)
+        branch_selected, branch_node_id = self.node_selected
+
+        if branch_selected == -1:
+            msg = qt.QMessageBox()
+            msg.setIcon(qt.QMessageBox.Critical)
+            msg.setWindowTitle("Error")
+            msg.setText("No node selected.")
+            msg.exec_()
+            return
+
+        if branch_id != branch_selected:
+            msg = qt.QMessageBox()
+            msg.setIcon(qt.QMessageBox.Critical)
+            msg.setWindowTitle("Error")
+            msg.setText("The node selected do not belong to this branch.")
+            msg.exec_()
+            return
+
+        if branch_node_id == 0:
+            return
+
+        self.truncate_branch_begin(branch_id, branch_node_id)
+        edges_node_id = self.edges[branch_id][0]
+        self.nodes[edges_node_id] = self.centerlines[branch_id][0]
+
+    def on_remove_end(self, treeItem):
+        """
+        Callback function when the user choose to delete the beginning of the root.
 
         Parameters
         ----------
@@ -655,7 +719,7 @@ class GraphBranches:
 
         edges_node_id = self.edges[branch_id][1]
         self.nodes[edges_node_id] = self.centerlines[branch_id][branch_node_id]
-        self.update_parent_branch(branch_id, branch_node_id + 1)
+        self.truncate_branch_end(branch_id, branch_node_id + 1)
 
     def delete_node(self, index: int):
         """
@@ -782,3 +846,52 @@ class GraphBranches:
         self.names.pop(child_idx)
 
         self.tree_widget.removeNode(child_list[0])
+
+    def extend_root_from_begin(
+        self,
+        centerline: np.ndarray,
+        contour_points: list[list[np.ndarray]],
+        centerline_radius: list[float],
+        root_idx: int,
+    ):
+        """
+        Extends the root from the beginning of it.
+
+
+        Parameters
+        ----------
+        centerline: array containing the points of the centerline.
+        contour_points: array of array of contour points, contour_points[0] are the points sampled around centerline[0],
+        contour_points[1] are the points sampled around centerline[1] etc...
+        centerline_radius: array containing the underestimated radius of each point of the centerline.
+        root_idx: index of the root branch.
+        """
+
+        centerline = centerline[::-1]
+        contour_points = contour_points[::-1]
+        centerline_radius = centerline_radius[::-1]
+
+        # Update the position of the new beginning of the root node
+        begin_node_idx = self.edges[root_idx][0]
+        self.nodes[begin_node_idx] = centerline[0]
+
+        # Remove the last point since they have it in common
+        centerline = centerline[:-1]
+        contour_points = contour_points[:-1]
+        centerline_radius = centerline_radius[:-1]
+
+        # Concatenate
+        self.centerlines[root_idx] = np.vstack((centerline, self.centerlines[root_idx]))
+        self.contours_points[root_idx] = contour_points + self.contours_points[root_idx]
+        self.centerline_radius[root_idx] = (
+            centerline_radius + self.centerline_radius[root_idx]
+        )
+
+        # Update markups
+        slicer.util.updateMarkupsControlPointsFromArray(
+            self.centerline_markups[root_idx], self.centerlines[root_idx]
+        )
+        slicer.util.updateMarkupsControlPointsFromArray(
+            self.contour_points_markups[root_idx],
+            np.array([elt for pts in self.contours_points[root_idx] for elt in pts]),
+        )

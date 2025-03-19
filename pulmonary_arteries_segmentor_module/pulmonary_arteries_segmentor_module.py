@@ -56,7 +56,6 @@ from ransac_slicer.region_growing_seeds import paint_segments, _compute_draw_ord
 from ransac_slicer.jit_compiled_functions import numba_close
 
 from networkx.readwrite import json_graph
-from scipy.ndimage import spline_filter
 import networkx as nx
 
 #
@@ -65,7 +64,8 @@ import networkx as nx
 
 
 class pulmonary_arteries_segmentor_module(ScriptedLoadableModule):
-    """Uses ScriptedLoadableModule base class, available at:
+    """
+    Uses ScriptedLoadableModule base class, available at:
     https://github.com/Slicer/Slicer/blob/main/Base/Python/slicer/ScriptedLoadableModule.py
     """
 
@@ -146,7 +146,8 @@ class pulmonary_arteries_segmentor_moduleParameterNode:
 class pulmonary_arteries_segmentor_moduleWidget(
     ScriptedLoadableModuleWidget, VTKObservationMixin
 ):
-    """Uses ScriptedLoadableModuleWidget base class, available at:
+    """
+    Uses ScriptedLoadableModuleWidget base class, available at:
     https://github.com/Slicer/Slicer/blob/main/Base/Python/slicer/ScriptedLoadableModule.py
     """
 
@@ -985,7 +986,8 @@ class pulmonary_arteries_segmentor_moduleWidget(
 
 
 class pulmonary_arteries_segmentor_moduleLogic(ScriptedLoadableModuleLogic):
-    """This class should implement all the actual
+    """
+    This class should implement all the actual
     computation done by your module.  The interface
     should be such that other python code can import
     this class and make use of the functionality without
@@ -1056,17 +1058,7 @@ class pulmonary_arteries_segmentor_moduleLogic(ScriptedLoadableModuleLogic):
         """
 
         # Prepare the volume object
-        interpolation_order = 3
-        vol = slicer.util.array(raw_volume.GetID())
-        vol = vol.swapaxes(0, 2)
-        vol = spline_filter(vol, order=interpolation_order)
-
-        ijk_to_ras = vtk.vtkMatrix4x4()
-        raw_volume.GetIJKToRASMatrix(ijk_to_ras)
-        np_ijk_to_ras = np.zeros(shape=(4, 4))
-        ijk_to_ras.DeepCopy(np_ijk_to_ras.ravel(), ijk_to_ras)
-
-        vol = Volume(vol, np_ijk_to_ras, interpolation_order)
+        vol = Volume.from_scalar_volume(raw_volume)
 
         # Prepare the starting and direction point objects
         starting_point = np.array([0, 0, 0])

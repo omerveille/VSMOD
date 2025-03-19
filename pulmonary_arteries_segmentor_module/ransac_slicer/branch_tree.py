@@ -4,7 +4,8 @@ import qt
 
 
 class Icons:
-    """Object responsible for the different icons in the module. The module doesn't have any icons internally but pulls
+    """
+    Object responsible for the different icons in the module. The module doesn't have any icons internally but pulls
     icons from slicer and the other modules.
     """
 
@@ -15,7 +16,8 @@ class Icons:
 
 
 class Signal:
-    """Qt like signal slot connections. Enables using the same semantics with Slicer as qt.Signal lead to application
+    """
+    Qt like signal slot connections. Enables using the same semantics with Slicer as qt.Signal lead to application
     crash.
     (see : https://discourse.slicer.org/t/custom-signal-slots-with-pythonqt/3278/5)
     """
@@ -49,7 +51,9 @@ class TreeColumnRole:
 
 
 class BranchTreeItem(qt.QTreeWidgetItem):
-    """Helper class holding nodeId and nodeName in the VesselBranchTree"""
+    """
+    Helper class holding nodeId and nodeName in the VesselBranchTree
+    """
 
     def __init__(self, nodeId):
         qt.QTreeWidgetItem.__init__(self)
@@ -74,7 +78,8 @@ class BranchTreeItem(qt.QTreeWidgetItem):
 
 
 class BranchTree(qt.QTreeWidget):
-    """Tree representation of vessel branch nodes.
+    """
+    Tree representation of vessel branch nodes.
 
     Class enables inserting new vessel node branches after or before existing nodes.
     Class signals when modified or user interacts with the UI.
@@ -96,14 +101,16 @@ class BranchTree(qt.QTreeWidget):
 
         self.itemRenamed = Signal(str, str)
         self.itemDropped = Signal()
+        self.itemRemoveBegin = Signal("VesselBranchTreeItem")
         self.itemRemoveEnd = Signal("VesselBranchTreeItem")
         self.itemDeleted = Signal("VesselBranchTreeItem")
         self.headerClicked = Signal(int)
 
         self._branchDict = {}
+        self.lastItemSelectInScene = None
 
         # Configure tree widget
-        self.setColumnCount(4)
+        self.setColumnCount(3)
         self.setHeaderLabels(["Branch Name", " Center", " Contour", ""])
 
         # Configure tree to have first section stretched and last sections to be at right of the layout
@@ -131,6 +138,7 @@ class BranchTree(qt.QTreeWidget):
         Remove all Tree items.
         """
         self._branchDict = {}
+        self.lastItemSelectInScene = None
         qt.QTreeWidget.clear(self)
 
     def setItemSelected(self, item):
@@ -159,7 +167,8 @@ class BranchTree(qt.QTreeWidget):
         return self.getParentNodeId(nodeId) is None
 
     def keyPressEvent(self, event):
-        """Overridden from qt.QTreeWidget to notify listeners of key event
+        """
+        Overridden from qt.QTreeWidget to notify listeners of key event
 
         Parameters
         ----------
@@ -172,29 +181,39 @@ class BranchTree(qt.QTreeWidget):
         """
         Called when the user right click on a Tree element.
         """
-        item = self.itemAt(position)
+        itemSelected = self.itemAt(position)
+        if itemSelected is None:
+            return
+
+        itemSelectednodeId = itemSelected.text(0)
+        selected_in_scene = itemSelected is self.lastItemSelectInScene
+
+        menu = qt.QMenu(self)
 
         renameAction = qt.QAction("Rename")
         renameAction.triggered.connect(self.renameItem)
-
-        removeEndAction = qt.QAction("Remove end of the branch")
-        removeEndAction.triggered.connect(
-            lambda: self.itemRemoveEnd.emit(self.currentItem())
-        )
-        if self.isLeaf(item.text(0)):
-            removeEndAction.setEnabled(True)
-        else:
-            removeEndAction.setEnabled(False)
-
-        deleteAction = qt.QAction("Delete")
-        deleteAction.triggered.connect(
-            lambda: self.itemDeleted.emit(self.currentItem())
-        )
-
-        menu = qt.QMenu(self)
         menu.addAction(renameAction)
-        menu.addAction(removeEndAction)
-        menu.addAction(deleteAction)
+
+        if self.isRoot(itemSelectednodeId) and selected_in_scene:
+            removeBeginAction = qt.QAction("Remove beginning of branch")
+            removeBeginAction.triggered.connect(
+                lambda: self.itemRemoveBegin.emit(self.currentItem())
+            )
+            menu.addAction(removeBeginAction)
+
+        if self.isLeaf(itemSelectednodeId) and selected_in_scene:
+            removeEndAction = qt.QAction("Remove end of the branch")
+            removeEndAction.triggered.connect(
+                lambda: self.itemRemoveEnd.emit(self.currentItem())
+            )
+            menu.addAction(removeEndAction)
+
+        if not self.isRoot(itemSelectednodeId):
+            deleteAction = qt.QAction("Delete")
+            deleteAction.triggered.connect(
+                lambda: self.itemDeleted.emit(self.currentItem())
+            )
+            menu.addAction(deleteAction)
 
         menu.exec_(self.mapToGlobal(position))
 
@@ -239,7 +258,9 @@ class BranchTree(qt.QTreeWidget):
             return BranchTreeItem(nodeId)
 
     def _removeFromParent(self, nodeItem):
-        """Remove input node item from its parent if it is attached to an item or from the TreeWidget if at the root"""
+        """
+        Remove input node item from its parent if it is attached to an item or from the TreeWidget if at the root
+        """
         parent = nodeItem.parent()
         if parent is not None:
             parent.removeChild(nodeItem)
@@ -247,7 +268,8 @@ class BranchTree(qt.QTreeWidget):
             self.takeTopLevelItem(self.indexOfTopLevelItem(nodeItem))
 
     def _insertNode(self, nodeId, parentId, becomeIntermediaryParent=False):
-        """Insert the nodeId with input node name as child of the item whose name is parentId. If parentId is None, the item
+        """
+        Insert the nodeId with input node name as child of the item whose name is parentId. If parentId is None, the item
         will be added as a root of the tree
 
         Parameters
@@ -283,7 +305,8 @@ class BranchTree(qt.QTreeWidget):
         parentNodeId: Union[str, None],
         becomeIntermediaryParent: bool = False,
     ):
-        """Insert given node after the input parent Id. Inserts new node as root if parentNodeId is None.
+        """
+        Insert given node after the input parent Id. Inserts new node as root if parentNodeId is None.
         If root is already present in the tree and insert after None is used, new node will become the parent of existing
         root node.
 
@@ -308,7 +331,8 @@ class BranchTree(qt.QTreeWidget):
         self.expandAll()
 
     def removeNode(self, nodeId):
-        """Remove given node from tree.
+        """
+        Remove given node from tree.
 
         If node is root, only remove if it has exactly one direct child and replace root by child. Else does nothing.
         If intermediate item, move each child of node to node parent.
@@ -389,26 +413,3 @@ class BranchTree(qt.QTreeWidget):
           True if nodeId has no children item, False otherwise
         """
         return len(self.getChildrenNodeId(nodeId)) == 0
-
-    def enforceOneRoot(self):
-        """Reorders tree to have only one root item. If elements are defined after root, they will be inserted before
-        current root. Methods is called during drop events.
-        """
-        # Early return if tree has at most one root
-        if self.topLevelItemCount <= 1:
-            return
-
-        # Set current root as second item child
-        newRoot = self.takeTopLevelItem(1)
-        currentRoot = self.takeTopLevelItem(0)
-        newRoot.addChild(currentRoot)
-
-        # Add the new root to the tree
-        self.insertTopLevelItem(0, newRoot)
-
-        # Expand both items
-        newRoot.setExpanded(True)
-        currentRoot.setExpanded(True)
-
-        # Call recursively until the whole tree has only one root
-        self.enforceOneRoot()

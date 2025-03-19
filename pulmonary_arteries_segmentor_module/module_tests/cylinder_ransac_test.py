@@ -2,7 +2,6 @@ import unittest
 
 import numpy as np
 import slicer
-import vtk
 
 from ransac_slicer.cylinder_ransac import (
     Config,
@@ -13,7 +12,6 @@ from ransac_slicer.cylinder_ransac import (
 )
 from ransac_slicer.volume import Volume
 from ransac_slicer.cylinder import Cylinder
-from scipy.ndimage import spline_filter
 from .test_utils import get_resources_path, load_object_from_path
 from ransac_slicer.popup_utils import CustomStatusDialog
 
@@ -31,17 +29,7 @@ class Cylinder_ransacTest(unittest.TestCase):
 
         # Prepare the volume object
         volume = load_object_from_path(volume_path)
-        interpolation_order = 3
-        vol = slicer.util.array(volume.GetID())
-        vol = vol.swapaxes(0, 2)
-        vol = spline_filter(vol, order=interpolation_order)
-
-        ijk_to_ras = vtk.vtkMatrix4x4()
-        volume.GetIJKToRASMatrix(ijk_to_ras)
-        np_ijk_to_ras = np.zeros(shape=(4, 4))
-        ijk_to_ras.DeepCopy(np_ijk_to_ras.ravel(), ijk_to_ras)
-
-        cls.vol = Volume(vol, np_ijk_to_ras, interpolation_order)
+        cls.vol = Volume.from_scalar_volume(volume)
 
         # Prepare the ransac config object
         cls.cfg = Config(

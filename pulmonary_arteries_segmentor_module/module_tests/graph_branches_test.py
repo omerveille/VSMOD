@@ -113,7 +113,7 @@ class Graph_branchesTest(unittest.TestCase):
         new_name = self.graph_branches.names[-1]
         self.assertIsNotNone(self.tree_widget.getTreeWidgetItem(new_name))
 
-    def test_04_GraphBranches_update_parent_branch(self):
+    def test_04_GraphBranches_truncate_branch(self):
         number_of_points = 10
         self.graph_branches.branch_list = [[Cylinder()] * number_of_points]
         self.graph_branches.centerlines = [np.zeros(shape=(number_of_points, 3))]
@@ -127,7 +127,32 @@ class Graph_branchesTest(unittest.TestCase):
         self.graph_branches.contour_points_markups = [
             slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsFiducialNode")
         ]
-        self.graph_branches.update_parent_branch(0, 2)
+        self.graph_branches.truncate_branch_end(0, 2)
+
+        self.assertEqual(len(self.graph_branches.branch_list[0]), 2)
+        self.assertEqual(self.graph_branches.centerlines[0].shape[0], 2)
+        self.assertEqual(len(self.graph_branches.contours_points[0]), 2)
+        self.assertEqual(len(self.graph_branches.centerline_radius[0]), 2)
+        self.assertEqual(
+            self.graph_branches.centerline_markups[0].GetNumberOfControlPoints(), 2
+        )
+        self.assertEqual(
+            self.graph_branches.contour_points_markups[0].GetNumberOfControlPoints(), 6
+        )
+
+        self.graph_branches.branch_list = [[Cylinder()] * number_of_points]
+        self.graph_branches.centerlines = [np.zeros(shape=(number_of_points, 3))]
+        self.graph_branches.contours_points = [
+            [[[0] * 3 for _ in range(3)] for _ in range(number_of_points)]
+        ]
+        self.graph_branches.centerline_radius = [[0.5] * number_of_points]
+        self.graph_branches.centerline_markups = [
+            slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsCurveNode")
+        ]
+        self.graph_branches.contour_points_markups = [
+            slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsFiducialNode")
+        ]
+        self.graph_branches.truncate_branch_begin(0, 8)
 
         self.assertEqual(len(self.graph_branches.branch_list[0]), 2)
         self.assertEqual(self.graph_branches.centerlines[0].shape[0], 2)
@@ -434,7 +459,64 @@ class Graph_branchesTest(unittest.TestCase):
         self.assertEqual(len(self.graph_branches.names), 1)
         self.assertGreater(self.graph_branches.centerlines[0].shape[0], 2)
 
-    def test_19_restore_lists_from_graph(self):
+    def test_19_GraphBranches_extend_root_from_begin(self):
+        self.graph_branches.centerlines = [np.zeros(shape=(10, 3), dtype=np.float64)]
+        self.graph_branches.contours_points = [[[[0.0] * 3] for _ in range(10)]]
+        self.graph_branches.centerline_radius = [[0.0] * 10]
+        self.graph_branches.edges = [(0, 1)]
+        self.graph_branches.nodes = [
+            np.zeros(shape=(3,), dtype=np.float64),
+            np.zeros(shape=(3,), dtype=np.float64),
+        ]
+        self.graph_branches.centerline_markups = [
+            slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsCurveNode")
+        ]
+        self.graph_branches.contour_points_markups = [
+            slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsFiducialNode")
+        ]
+
+        centerline = np.vstack(
+            (
+                np.zeros(shape=(3,), dtype=np.float64),
+                np.ones_like(self.graph_branches.centerlines[0]),
+            )
+        )
+        contour_points = [[[0.0] * 3]] + [[[1.0] * 3] for _ in range(10)]
+        centerline_radius = [0.0] + [1.0] * 10
+        root_idx = 0
+        self.graph_branches.extend_root_from_begin(
+            centerline=centerline,
+            contour_points=contour_points,
+            centerline_radius=centerline_radius,
+            root_idx=root_idx,
+        )
+
+        expected_centerline = np.vstack((centerline[1:], np.zeros_like(centerline[1:])))
+        expected_contour_points = np.array(
+            [[[1.0] * 3] for _ in range(10)] + [[[0.0] * 3] for _ in range(10)],
+            dtype=np.float64,
+        )
+        expected_radius = np.array([1.0] * 10 + [0.0] * 10, dtype=np.float64)
+        expected_node = np.ones(shape=(3,), dtype=np.float64)
+
+        assert_almost_equal(expected_centerline, self.graph_branches.centerlines[0])
+        assert_almost_equal(
+            expected_contour_points,
+            np.array(self.graph_branches.contours_points[0], dtype=np.float64),
+        )
+        assert_almost_equal(
+            expected_radius,
+            np.array(self.graph_branches.centerline_radius[0], dtype=np.float64),
+        )
+        assert_almost_equal(expected_node, self.graph_branches.nodes[0])
+        self.assertEqual(
+            self.graph_branches.centerline_markups[0].GetNumberOfControlPoints(), 20
+        )
+        self.assertEqual(
+            self.graph_branches.contour_points_markups[0].GetNumberOfControlPoints(), 20
+        )
+
+    def test_20_restore_lists_from_graph(self):
         def custom_iterable_assertion(list_1: list, list_2: list):
             for item_1, item_2 in zip(list_1, list_2):
                 assert type(item_1) is type(item_2)

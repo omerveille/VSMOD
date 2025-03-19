@@ -237,18 +237,3 @@ class Branch_treeTest(unittest.TestCase):
         tree._branchDict["child"] = child_item
 
         self.assertFalse(tree.isLeaf("node"))
-
-    def test_22_BranchTree_enforceOneRoot(self):
-        tree = BranchTree()
-        root_1 = BranchTreeItem("root_1")
-        root_2 = BranchTreeItem("root_2")
-        tree._branchDict["root_1"] = root_1
-        tree._branchDict["root_2"] = root_2
-        tree.addTopLevelItem(root_1)
-        tree.addTopLevelItem(root_2)
-        tree.enforceOneRoot()
-
-        self.assertEqual(tree.topLevelItemCount, 1)
-
-        top_item = tree.topLevelItem(0)
-        self.assertGreater(top_item.childCount(), 0)

@@ -3,7 +3,6 @@ import trimesh.primitives as tp
 import time
 import json
 from pathlib import Path
-from datetime import datetime
 
 timers = []
 
@@ -30,11 +29,11 @@ def flush_timers() -> Path:
         The path to the created file.
     """
 
-    timer_file_path = Path(
-        f"./timers_{datetime.now().strftime('%Y-%m-%d_%H:%M:%S')}.json"
+    timer_file_path = Path().joinpath(
+        "timers_{datetime.now().strftime('%Y-%m-%d_%H:%M:%S')}.json"
     )
     timer_file_path.touch(exist_ok=True)
-    with open(timer_file_path, "w+") as f:
+    with open(timer_file_path, "w") as f:
         json.dump(timers, f, indent=4)
     timers.clear()
 

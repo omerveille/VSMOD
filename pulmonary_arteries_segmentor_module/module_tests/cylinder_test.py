@@ -25,29 +25,35 @@ class CylinderTest(unittest.TestCase):
         assert_array_almost_equal(cyl_a.direction, cyl_b.direction)
         self.assertEqual(cyl_a.height, cyl_b.height)
 
-    def test_03_Cylinder_distance(self):
+    def test_03_Cylinder_distances(self):
         # Test with points on the surface of the cylinder
         points, center, radius, direction = generate_points(
             number_of_points=300, radius=1
         )
 
         cylinder = Cylinder(center=center, radius=radius, direction=direction)
-        distance_result = cylinder.distance(points)
-        assert_array_almost_equal(distance_result, np.zeros_like(distance_result))
+        distance = cylinder.distance(points)
+        signed_distance = cylinder.signed_distance(points)
+        assert_array_almost_equal(distance, np.full_like(distance, fill_value=1.0))
+        assert_array_almost_equal(signed_distance, np.zeros_like(signed_distance))
 
         # Test with points outside the cylinder (distance 1)
         points, _, _, _ = generate_points(
             number_of_points=300, radius=1, x_y_noise_range=(2, 2)
         )
-        distance_result = cylinder.distance(points)
-        assert_array_almost_equal(distance_result, np.ones_like(distance_result))
+        distance = cylinder.distance(points)
+        signed_distance = cylinder.signed_distance(points)
+        assert_array_almost_equal(distance, np.full_like(distance, fill_value=2.0))
+        assert_array_almost_equal(signed_distance, np.ones_like(signed_distance))
 
         # Test with points inside the cylinder (on the axis, so distance 0)
         points = points, _, _, _ = generate_points(
             number_of_points=300, radius=1, x_y_noise_range=(0, 0)
         )
-        distance_result = cylinder.distance(points)
-        assert_array_almost_equal(distance_result, -np.ones_like(distance_result))
+        distance = cylinder.distance(points)
+        signed_distance = cylinder.signed_distance(points)
+        assert_array_almost_equal(distance, np.zeros_like(distance))
+        assert_array_almost_equal(signed_distance, -np.ones_like(signed_distance))
 
     def test_04_Cylinder_select_inliers(self):
         inlier_threshold = 0.25

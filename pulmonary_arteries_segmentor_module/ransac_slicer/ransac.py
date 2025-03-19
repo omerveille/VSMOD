@@ -278,18 +278,25 @@ def run_ransac(
     )
     del cylinders
 
-    graph_branches.nodes.append(centerline[-1])
-    edge_begin = (
-        graph_branches.edges[graph_branches.names.index(parent_node)][1]
-        if isNewBranch
-        else len(graph_branches.nodes) - 2
-    )
-    graph_branches.create_new_branch(
-        (edge_begin, len(graph_branches.nodes) - 1),
-        centerline,
-        contour_points,
-        centerline_radius,
-        parent_node,
-    )
+    # Case of a split branch / new root / concatenation of branches
+    if not isNewBranch or parent_node is not None:
+        graph_branches.nodes.append(centerline[-1])
+        edge_begin = (
+            graph_branches.edges[graph_branches.names.index(parent_node)][1]
+            if isNewBranch
+            else len(graph_branches.nodes) - 2
+        )
+        graph_branches.create_new_branch(
+            (edge_begin, len(graph_branches.nodes) - 1),
+            centerline,
+            contour_points,
+            centerline_radius,
+            parent_node,
+        )
+    # Case when we are creating a new branch extending the root before the initial point (the only case of backward extension)
+    else:
+        graph_branches.extend_root_from_begin(
+            centerline, contour_points, centerline_radius, idx_cb
+        )
 
     return graph_branches

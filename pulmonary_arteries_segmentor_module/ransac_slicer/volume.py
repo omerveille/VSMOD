@@ -1,6 +1,10 @@
 import numpy as np
 import scipy.ndimage as sndi
 from . import helper
+from slicer import vtkMRMLScalarVolumeNode
+from scipy.ndimage import spline_filter
+import slicer
+import vtk
 
 
 class Volume:
@@ -8,7 +12,7 @@ class Volume:
     Class to represent a volume
     """
 
-    def __init__(self, data=np.zeros((0, 0, 0)), ijk_to_ras=np.eye(4), order=1):
+    def __init__(self, data=np.zeros((0, 0, 0)), ijk_to_ras=np.eye(4), order=3):
         """
         Initializes a volume
 
@@ -25,10 +29,39 @@ class Volume:
         if len(data.shape) != 3 or ijk_to_ras.shape != (4, 4):
             raise ValueError
 
+        data = spline_filter(data, order=order)
+
         self._vol, self.ijk_to_ras = data, ijk_to_ras
 
         # Default to linear interpolation
         self._order = order
+
+    @classmethod
+    def from_scalar_volume(cls, volume: vtkMRMLScalarVolumeNode):
+        """
+        Initializes a volume
+
+        Args:
+            volume (vtkMRMLScalarVolumeNode): Volume node.
+
+        Raises:
+            TypeError: If the volume's argument type is not correct
+        """
+        if not isinstance(volume, vtkMRMLScalarVolumeNode):
+            raise TypeError(
+                f"Expected volume to be a vtkMRMLScalarVolumeNode got a {type(volume)}"
+            )
+
+        interpolation_order = 3
+        data = slicer.util.array(volume.GetID())
+        data = data.swapaxes(0, 2)
+        data = spline_filter(data, order=interpolation_order)
+
+        ijk_to_ras = vtk.vtkMatrix4x4()
+        volume.GetIJKToRASMatrix(ijk_to_ras)
+        np_ijk_to_ras = np.zeros(shape=(4, 4))
+        ijk_to_ras.DeepCopy(np_ijk_to_ras.ravel(), ijk_to_ras)
+        return Volume(data=data, ijk_to_ras=np_ijk_to_ras, order=interpolation_order)
 
     def __call__(self, p):
         """

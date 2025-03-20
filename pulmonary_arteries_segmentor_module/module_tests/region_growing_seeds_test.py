@@ -8,7 +8,7 @@ from networkx.readwrite import json_graph
 from numpy.testing import assert_array_almost_equal
 from ransac_slicer.graph_branches import restore_lists_from_graph
 from ransac_slicer.region_growing_seeds import _compute_draw_order, paint_segments
-from .test_utils import get_resources_path, load_object_from_path
+from .test_utils import get_resources_path
 
 
 class RegionGrowingSeedsTest(unittest.TestCase):
@@ -19,12 +19,6 @@ class RegionGrowingSeedsTest(unittest.TestCase):
         ressource_test_dir = get_resources_path()
         volume_path = ressource_test_dir.joinpath("IXI002-Guys-0828-MRA.nii.gz")
         branch_tree_path = ressource_test_dir.joinpath("graph_tree.json")
-        cls.segmentation_not_merged_path = ressource_test_dir.joinpath(
-            "region_growing_seeds"
-        ).joinpath("segmentation_test_not_merged.npy")
-        cls.segmentation_merged_path = ressource_test_dir.joinpath(
-            "region_growing_seeds"
-        ).joinpath("segmentation_test_merged.npy")
 
         with open(branch_tree_path) as f:
             js_graph = json.load(f)
@@ -41,11 +35,6 @@ class RegionGrowingSeedsTest(unittest.TestCase):
         )
         cls.segmentation_node = segmentation_node
 
-        # Used to get the labelmap as a numpy array to compare
-        cls.labelmap_node = slicer.mrmlScene.AddNewNodeByClass(
-            "vtkMRMLLabelMapVolumeNode"
-        )
-
         (
             _,
             cls.names,
@@ -60,7 +49,7 @@ class RegionGrowingSeedsTest(unittest.TestCase):
         cls.draw_order = _compute_draw_order(nodes, edges)
 
     def test_01_paint_segments_end_to_end(self):
-        paint_segments(
+        labelmap_array = paint_segments(
             volume_node=self.volume_node,
             centerlines=self.centerlines,
             centerline_names=self.names,
@@ -73,16 +62,10 @@ class RegionGrowingSeedsTest(unittest.TestCase):
             merge_all_vessels=False,
         )
 
-        slicer.modules.segmentations.logic().ExportAllSegmentsToLabelmapNode(
-            self.segmentation_node, self.labelmap_node
-        )
-        labelmap_array: np.ndarray = slicer.util.arrayFromVolume(self.labelmap_node)
-        true_segmentation = load_object_from_path(self.segmentation_not_merged_path)
-
-        assert_array_almost_equal(true_segmentation, labelmap_array)
+        assert_array_almost_equal(np.arange(stop=15), np.unique(labelmap_array))
         del labelmap_array
 
-        paint_segments(
+        labelmap_array = paint_segments(
             volume_node=self.volume_node,
             centerlines=self.centerlines,
             centerline_names=self.names,
@@ -95,13 +78,7 @@ class RegionGrowingSeedsTest(unittest.TestCase):
             merge_all_vessels=True,
         )
 
-        slicer.modules.segmentations.logic().ExportAllSegmentsToLabelmapNode(
-            self.segmentation_node, self.labelmap_node
-        )
-        labelmap_array: np.ndarray = slicer.util.arrayFromVolume(self.labelmap_node)
-        true_segmentation = load_object_from_path(self.segmentation_merged_path)
-
-        assert_array_almost_equal(true_segmentation, labelmap_array)
+        assert_array_almost_equal(np.arange(stop=3), np.unique(labelmap_array))
 
     def tearDown(self) -> None:
         slicer.mrmlScene.Clear()

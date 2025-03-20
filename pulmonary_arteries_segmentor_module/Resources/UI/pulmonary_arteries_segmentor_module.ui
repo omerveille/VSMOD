@@ -269,9 +269,6 @@
             <property name="text">
              <string/>
             </property>
-            <property name="SlicerParameterName" stdset="0">
-             <string>useLastTrackedRadius</string>
-            </property>
            </widget>
           </item>
           <item row="1" column="0">
@@ -706,12 +703,9 @@
            </widget>
           </item>
           <item row="3" column="1">
-           <widget class="ctkCheckBox" name="mergeAllVesselsCheck">
+           <widget class="ctkCheckBox" name="mergeAllVessels">
             <property name="toolTip">
              <string>Check this if you want all the vessels to be merge inside on single region.</string>
-            </property>
-            <property name="SlicerParameterName" stdset="0">
-             <string>mergeAllVessels</string>
             </property>
            </widget>
           </item>
@@ -841,7 +835,7 @@
   <tabstop>reductionFactor</tabstop>
   <tabstop>reductionThreshold</tabstop>
   <tabstop>contourDistance</tabstop>
-  <tabstop>mergeAllVesselsCheck</tabstop>
+  <tabstop>mergeAllVessels</tabstop>
   <tabstop>paintButton</tabstop>
  </tabstops>
  <resources/>

@@ -156,7 +156,7 @@ def paint_segments(
     reduction_threshold: float,
     contour_distance: int,
     merge_all_vessels: bool,
-) -> None:
+) -> np.ndarray:
     """
     Paint the segmentations segments according to the centerlines and their associated radius.
 
@@ -173,6 +173,11 @@ def paint_segments(
     reduction_factor: amount of the reduction.
     contour_distance: distance in voxel between the vessel and the contour.
     merge_all_vessels: if True, this flag will put every vessels in the same segment, instead of separeted ones.
+
+    Returns
+    ----------
+
+    The segmentation mapping of the volume.
     """
 
     # Important variables
@@ -431,3 +436,5 @@ def paint_segments(
 
     slicer.mrmlScene.RemoveNode(labelmap_node)
     progress_dialog.close()
+
+    return segment_map

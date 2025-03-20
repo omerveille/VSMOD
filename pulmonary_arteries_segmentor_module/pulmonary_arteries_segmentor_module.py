@@ -120,7 +120,6 @@ class pulmonary_arteries_segmentor_moduleParameterNode:
 
     # Simple Ransac paramaters
     startingRadius: Annotated[float, WithinRange(0.1, 1000.0)] = 10.0
-    useLastTrackedRadius: bool
     centerlineResolution: Annotated[float, WithinRange(0.1, 1000.0)] = 5.0
 
     # Advanced Ransac paramaters
@@ -135,7 +134,6 @@ class pulmonary_arteries_segmentor_moduleParameterNode:
     reductionFactor: Annotated[float, WithinRange(0.0, 1.0)] = 0.75
     reductionThreshold: Annotated[float, WithinRange(0.0, 1000.0)] = 5.0
     contourDistance: Annotated[int, WithinRange(1, 1000)] = 4
-    mergeAllVessels: bool
 
 
 #
@@ -178,9 +176,9 @@ class pulmonary_arteries_segmentor_moduleWidget(
             slicer.app.minorVersion,
             float(slicer.app.revision),
         )
-        if slicer_version < (5, 8, 0):
+        if slicer_version < (5, 6, 1):
             error_msg = (
-                "This plugin is only compatible for slicer version superior to 5.8.0.\n"
+                "This plugin is only compatible for slicer version superior to 5.6.1.\n"
                 "Please download the latest Slicer version to use this plugin."
             )
             self.layout.addWidget(qt.QLabel(error_msg))
@@ -802,7 +800,7 @@ class pulmonary_arteries_segmentor_moduleWidget(
                 min_number_of_attempts=self.parameterNode.minNumberOfAttempts,
                 max_number_of_attempts=self.parameterNode.maxNumberOfAttempts,
                 max_number_of_cylinders=self.parameterNode.maxNumberOfCylinders,
-                use_last_tracked_radius=self.parameterNode.useLastTrackedRadius,
+                use_last_tracked_radius=self.ui.useLastTrackedRadius.checked,
                 graph_branches=self.graph_branches,
                 isNewBranch=self.ui.createBranch.text == "Create New Branch",
                 progress_dialog=progress_dialog,
@@ -888,7 +886,7 @@ class pulmonary_arteries_segmentor_moduleWidget(
                 self.parameterNode.reductionFactor,
                 self.parameterNode.reductionThreshold,
                 self.parameterNode.contourDistance,
-                self.parameterNode.mergeAllVessels,
+                self.ui.mergeAllVessels.checked,
             )
 
             # Remove segmentation from the UI

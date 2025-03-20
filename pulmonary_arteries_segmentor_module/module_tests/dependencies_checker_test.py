@@ -19,16 +19,16 @@ class DependenciesInstallationTest(unittest.TestCase):
             pip_uninstall(
                 "numpy scipy trimesh scikit-image networkx numba intel-openmp"
             )
-            missing_modules = check_missing_module_pip(required_modules)
+            missing_modules = check_missing_module_pip()
 
-            self.assertListEqual(sorted(missing_modules), sorted(required_modules))
+            self.assertDictEqual(missing_modules, required_modules)
 
             with slicer.util.tryWithErrorDisplay(
                 "Failed to install dependencies.", waitCursor=True
             ):
                 install_missing_module(missing_modules)
 
-            missing_modules = check_missing_module_pip(required_modules)
+            missing_modules = check_missing_module_pip()
             self.assertFalse(missing_modules)
 
     def handle_failure(self):

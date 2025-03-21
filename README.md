@@ -15,8 +15,10 @@
     - [Enforce pre-commit to run 🏃](#enforce-pre-commit-to-run-)
 <!-- TOC -->
 ## Introduction 📜
+
 PulmonaryArteriesSegmentor is a 3D Slicer plugin that aims to ease the segmentation and annotation of the pulmonary arteries for angiography images.
 The segmentation and annotation process is divided into three steps:
+
 1) Place points to indicate the direction of the vessel you would like to segment.
 2) Start a centerline segmentation from points, and repeat steps 1) and 2) until you have all the vessels you desire.
 3) Once you have all the vessels you want, paint the segmentation to generate an initialization of region-growing.
@@ -27,7 +29,10 @@ The RANSAC code is based on the previous work of Jack CARBONERO (CReSTIC), Guill
 
 The hierarchy code is based on the work of Lucie Macron (Kitware SAS), Thibault Pelletier (Kitware SAS), Camille Huet (Kitware SAS), Leo Sanchez (Kitware SAS) from the RVesselX plugin.
 
+The IXI002-Guys-0828-MRA.nii.gz file used in the tests is part of the IXI MRA image dataset and can be found [here](https://brain-development.org/ixi-dataset/) and is made available under the Creative Commons [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/legalcode) license.
+
 ## Installation 📂
+
 To install the plugin, you have to do the following steps:
 
 1) Download the plugin as a zip file or clone this repository. Extract it if you downloaded a zip, you can clone / extract it wherever you want.
@@ -41,12 +46,16 @@ To install the plugin, you have to do the following steps:
 Tips: If you struggle to find any of those modules, you can use the magnifying glass to search modules by name.
 
 ## Usage of the plugin 💡
+
 ### Overview 🌐
+
 The plugin is divided into two tabs:
+
 - **Centerline** which is used to create a tree from the vessels' centerline.
 - **Segmentation** which creates a segmentation and fills it according to the centerline tree.
 
 ### The centerline tab ➰
+
 In order to make a segmentation, you first have to create a vessel centerline tree.
 To do so, you have to go inside the centerline tab. Inside it, you must select a volume, a starting point, and a direction point list.
 
@@ -74,6 +83,7 @@ If you want, you can also save the hierarchy of all the vessel points into a net
 [save_as_json.webm](https://github.com/Leirbag-gabrieL/PulmonaryArteriesSegmentor/assets/91014653/6ae7029b-8293-400b-9ad5-b8aa047892c5)
 
 ### The segmentation tab 🧩
+
 The segmentation tab is pretty straightforward, you have a button `Create segmentation from branches` / `Update segmentation from branches`, and when you click on it, it creates a new segmentation, which is an initialization for the 3D slicer's region-growing.
 You can always add segments / edit the segmentation generated as you want in the segmentation widget.
 
@@ -84,17 +94,21 @@ To finalize segmentation, you just have to run the region-growing of slicer whic
 [region_growing.webm](https://github.com/Leirbag-gabrieL/PulmonaryArteriesSegmentor/assets/91014653/1972b1e9-8f2d-4f1c-87ae-53d16eaf0362)
 
 ## Algorithms involved
+
 ### Centerline ➰
+
 In this part, the main algorithm used is RANSAC. Basically, we take a set of points around the starting and direction points and try to fit a cylinder. If the set of points is a good candidate for a cylinder, then we keep this cylinder and iterate to find a new one with a certain width and height proportional to the last cylinder in a predefined range of angles. The algorithm stops eventually when there are no more fitting cylinders to add.
 
 When adding a new branch, we simply rerun a RANSAC with the latest points added to the starting and direction point lists. After that, we find the closest point to the starting point in the already-created branches, this point will be considered as the intersection of the two branches. We later reorder the branches so that they form a tree.
 
 ### Segmentation 🧩
+
 In order to draw each segment starting seed for the segmentation, we simply iterate through each point of the centerline, and for each point, we draw a sphere of the radius of the vessel. We underestimate the radius so that the segmentation can find the accurate radius. The radius of a vessel is the distance between the closest contour point and the centerline.
 
 For the stopping edge, we use the labelmap representation of the segmentation. We take all the segments and apply two morphological dilations with a sphere of sizes 4 and 6. After that, we subtract the result of the dilation of size 4 from the result of size 6. At the end, we obtain an edge that surrounds our vessels and acts as a stopper point for a the 3D slicer's region-growing algorithm.
 
 ## For developers 👩‍💻👨‍💻
+
 ### Setup pre-commit 🏗️
 
 ```shell

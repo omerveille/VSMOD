@@ -59,11 +59,11 @@ from networkx.readwrite import json_graph
 import networkx as nx
 
 #
-# pulmonary_arteries_segmentor_module
+# VSMOD
 #
 
 
-class pulmonary_arteries_segmentor_module(ScriptedLoadableModule):
+class VSMOD(ScriptedLoadableModule):
     """
     Uses ScriptedLoadableModule base class, available at:
     https://github.com/Slicer/Slicer/blob/main/Base/Python/slicer/ScriptedLoadableModule.py
@@ -71,12 +71,12 @@ class pulmonary_arteries_segmentor_module(ScriptedLoadableModule):
 
     def __init__(self, parent):
         ScriptedLoadableModule.__init__(self, parent)
-        self.parent.title = "Pulmonary Arteries Segmentor"
+        self.parent.title = "VSMOD"
         self.parent.categories = ["Segmentation"]
         self.parent.dependencies = []
         self.parent.contributors = ["Azéline Aillet", "Gabriel Husak"]
         self.parent.helpText = """
-A 3D Slicer plugin for pulmonary artery extraction from angiography images.
+A 3D Slicer Vessel Segmentation and MODelization plugin.
 """
         self.parent.acknowledgementText = """
 This plugin is an end-of-study project, made by Azéline Aillet (Student at EPITA) and Gabriel Husak (Student at EPITA), under the direction of Odyssée Merveille (CREATIS) and Morgane Des Ligneris (CREATIS).
@@ -86,12 +86,12 @@ The hierarchy code is based on the work of Lucie Macron (Kitware SAS), Thibault 
 
 
 #
-# pulmonary_arteries_segmentor_moduleParameterNode
+# VSMODParameterNode
 #
 
 
 @parameterNodeWrapper
-class pulmonary_arteries_segmentor_moduleParameterNode:
+class VSMODParameterNode:
     """
     Class to wrap the inputs of the plugin's interface, the fields are automaticaly updated.
 
@@ -137,13 +137,11 @@ class pulmonary_arteries_segmentor_moduleParameterNode:
 
 
 #
-# pulmonary_arteries_segmentor_moduleWidget
+# VSMODWidget
 #
 
 
-class pulmonary_arteries_segmentor_moduleWidget(
-    ScriptedLoadableModuleWidget, VTKObservationMixin
-):
+class VSMODWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     """
     Uses ScriptedLoadableModuleWidget base class, available at:
     https://github.com/Slicer/Slicer/blob/main/Base/Python/slicer/ScriptedLoadableModule.py
@@ -190,9 +188,7 @@ class pulmonary_arteries_segmentor_moduleWidget(
 
         # Load widget from .ui file (created by Qt Designer).
         # Additional widgets can be instantiated manually and added to self.layout.
-        uiWidget = slicer.util.loadUI(
-            self.resourcePath("UI/pulmonary_arteries_segmentor_module.ui")
-        )
+        uiWidget = slicer.util.loadUI(self.resourcePath("UI/VSMOD.ui"))
         self.layout.addWidget(uiWidget)
         self.ui = slicer.util.childWidgetVariables(uiWidget)
 
@@ -221,7 +217,7 @@ class pulmonary_arteries_segmentor_moduleWidget(
 
         # Create logic class. Logic implements all computations that should be possible to run
         # in batch mode, without a graphical user interface.
-        self.logic = pulmonary_arteries_segmentor_moduleLogic()
+        self.logic = VSMODLogic()
 
         self.branch_tree = BranchTree()
         begin_tab = self.ui.tabWidget.widget(0)
@@ -393,7 +389,7 @@ class pulmonary_arteries_segmentor_moduleWidget(
 
     def setParameterNode(
         self,
-        inputParameterNode: Optional[pulmonary_arteries_segmentor_moduleParameterNode],
+        inputParameterNode: Optional[VSMODParameterNode],
     ) -> None:
         """
         Set and observe parameter node.
@@ -979,11 +975,11 @@ class pulmonary_arteries_segmentor_moduleWidget(
 
 
 #
-# pulmonary_arteries_segmentor_moduleLogic
+# VSMODLogic
 #
 
 
-class pulmonary_arteries_segmentor_moduleLogic(ScriptedLoadableModuleLogic):
+class VSMODLogic(ScriptedLoadableModuleLogic):
     """
     This class should implement all the actual
     computation done by your module.  The interface
@@ -1004,9 +1000,7 @@ class pulmonary_arteries_segmentor_moduleLogic(ScriptedLoadableModuleLogic):
         """
         Returns parent's parameter node.
         """
-        return pulmonary_arteries_segmentor_moduleParameterNode(
-            super().getParameterNode()
-        )
+        return VSMODParameterNode(super().getParameterNode())
 
     def processBranch(
         self,
@@ -1094,11 +1088,11 @@ class pulmonary_arteries_segmentor_moduleLogic(ScriptedLoadableModuleLogic):
 
 
 #
-# pulmonary_arteries_segmentor_moduleTest
+# VSMODTest
 #
 
 
-class pulmonary_arteries_segmentor_moduleTest(ScriptedLoadableModuleTest):
+class VSMODTest(ScriptedLoadableModuleTest):
     """
     This is the test case for your scripted module.
     Uses ScriptedLoadableModuleTest base class, available at:

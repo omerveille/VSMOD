@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>pulmonary_arteries_segmentor_module</class>
- <widget class="qMRMLWidget" name="pulmonary_arteries_segmentor_module">
+ <class>VSMOD</class>
+ <widget class="qMRMLWidget" name="VSMOD">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -254,7 +254,7 @@
           <item row="4" column="0">
            <widget class="QLabel" name="trackedLabel">
             <property name="text">
-             <string>Use Last Tacked Radius</string>
+             <string>Use Last Tracked Radius</string>
             </property>
            </widget>
           </item>
@@ -841,7 +841,7 @@
  <resources/>
  <connections>
   <connection>
-   <sender>pulmonary_arteries_segmentor_module</sender>
+   <sender>VSMOD</sender>
    <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
    <receiver>inputSelector</receiver>
    <slot>setMRMLScene(vtkMRMLScene*)</slot>
@@ -857,7 +857,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>pulmonary_arteries_segmentor_module</sender>
+   <sender>VSMOD</sender>
    <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
    <receiver>startingPointSelector</receiver>
    <slot>setMRMLScene(vtkMRMLScene*)</slot>
@@ -873,7 +873,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>pulmonary_arteries_segmentor_module</sender>
+   <sender>VSMOD</sender>
    <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
    <receiver>directionPointSelector</receiver>
    <slot>setMRMLScene(vtkMRMLScene*)</slot>
@@ -889,7 +889,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>pulmonary_arteries_segmentor_module</sender>
+   <sender>VSMOD</sender>
    <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
    <receiver>SegmentEditorWidget</receiver>
    <slot>setMRMLScene(vtkMRMLScene*)</slot>
@@ -905,7 +905,7 @@
    </hints>
   </connection>
   <connection>
-   <sender>pulmonary_arteries_segmentor_module</sender>
+   <sender>VSMOD</sender>
    <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
    <receiver>measureDistance</receiver>
    <slot>setMRMLScene(vtkMRMLScene*)</slot>

@@ -1,5 +1,5 @@
 #-----------------------------------------------------------------------------
-set(MODULE_NAME pulmonary_arteries_segmentor_module)
+set(MODULE_NAME VSMOD)
 
 #-----------------------------------------------------------------------------
 set(MODULE_PYTHON_SCRIPTS

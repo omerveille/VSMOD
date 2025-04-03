@@ -57,7 +57,7 @@ class RegionGrowingSeedsTest(unittest.TestCase):
             branch_draw_order=self.draw_order,
             segmentation_node=self.segmentation_node,
             reduction_factor=0.75,
-            reduction_threshold=5.0,
+            radius_reduction_threshold=5.0,
             contour_distance=4,
             merge_all_vessels=False,
         )
@@ -73,7 +73,7 @@ class RegionGrowingSeedsTest(unittest.TestCase):
             branch_draw_order=self.draw_order,
             segmentation_node=self.segmentation_node,
             reduction_factor=0.75,
-            reduction_threshold=5.0,
+            radius_reduction_threshold=5.0,
             contour_distance=4,
             merge_all_vessels=True,
         )

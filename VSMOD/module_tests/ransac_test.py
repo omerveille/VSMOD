@@ -107,7 +107,7 @@ class RansacTest(unittest.TestCase):
         )
 
         # We basically assert nothing wrong happens
-        graph_branches = run_ransac(
+        run_ransac(
             vol=self.vol,
             starting_point=starting_point,
             direction_point=direction_point,
@@ -119,7 +119,7 @@ class RansacTest(unittest.TestCase):
             min_number_of_attempts=20000,
             max_number_of_attempts=20000,
             max_number_of_cylinders=1000,
-            use_last_tracked_radius=False,
+            smart_diameter_selection=False,
             graph_branches=graph_branches,
             isNewBranch=False,
             progress_dialog=progress_dialog,

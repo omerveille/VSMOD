@@ -102,14 +102,18 @@ class VSMODParameterNode:
     startingPoint: starting point list for RANSAC cylinders.
     directionPoint: direction point list for RANSAC cylinders.
 
-    startingRadius: initiale radius of the first cylinder to fit.
+    diameter: initial diameter of the first cylinder to fit.
     centerlineResolution: maximum allowed distance between to point on the tracked centerline.
 
     percentInlierPoints: percentage of inlier points to validate a cylinder.
     percentThreshold: percentage of last cylinders radius to make a point inlier of a cylinder.
     maximumTurnAngle: the maximum possible angle between two consecutive cylinder
-    maxNumberOfAttempts: the maximum amount of candidate cylinder to test
-    maxNumberOfCylinders: the maximum amount of cylinder tracked in one branch
+    maxNumberOfAttempts: the maximum amount of candidate cylinder to test.
+    maxNumberOfCylinders: the maximum amount of cylinder tracked in one branch.
+
+    reductionFactor: reduction factor applied to vessels which diameter is above a certain threshold.
+    diameterReductionThreshold: threshold after which the diameter of vessels is reduced by a certain factor
+    contourDistance: the size of the gap in voxel, between the vessels' seed and contour region.
     """
 
     # Input tab
@@ -119,20 +123,20 @@ class VSMODParameterNode:
     measureDistance: vtkMRMLMarkupsLineNode
 
     # Simple Ransac paramaters
-    startingRadius: Annotated[float, WithinRange(0.1, 1000.0)] = 10.0
+    diameter: Annotated[float, WithinRange(0.0, 2000.0)] = 10.0
     centerlineResolution: Annotated[float, WithinRange(0.1, 1000.0)] = 5.0
 
     # Advanced Ransac paramaters
     percentInlierPoints: Annotated[float, WithinRange(0.0, 100.0)] = 60.0
     percentThreshold: Annotated[float, WithinRange(0.0, 100.0)] = 30.0
     maximumTurnAngle: Annotated[float, WithinRange(0.0, 90.0)] = 60.0
-    minNumberOfAttempts: Annotated[int, WithinRange(0, 99999999)] = 0
-    maxNumberOfAttempts: Annotated[int, WithinRange(0, 99999999)] = 1000
+    minNumberOfAttempts: Annotated[int, WithinRange(0, 99999999)] = 20000
+    maxNumberOfAttempts: Annotated[int, WithinRange(0, 99999999)] = 10000
     maxNumberOfCylinders: Annotated[int, WithinRange(1, 99999999)] = 1000
 
     # Segmentation parameters
     reductionFactor: Annotated[float, WithinRange(0.0, 1.0)] = 0.75
-    reductionThreshold: Annotated[float, WithinRange(0.0, 1000.0)] = 5.0
+    diameterReductionThreshold: Annotated[float, WithinRange(0.0, 2000.0)] = 10.0
     contourDistance: Annotated[int, WithinRange(1, 1000)] = 4
 
 
@@ -246,7 +250,7 @@ class VSMODWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
         # Buttons callbacks
         self.ui.placePointButton.connect("clicked(bool)", self.startPlacePointProcedure)
-        self.ui.measureRadiusButton.connect("clicked(bool)", self.measure)
+        self.ui.measureDiameterButton.connect("clicked(bool)", self.measure)
 
         self.ui.createBranch.connect("clicked(bool)", self.create_branch)
         self.ui.clearTree.connect(
@@ -280,6 +284,8 @@ class VSMODWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
                 TreeColumnRole.VISIBILITY_CONTOUR
             ),
         )
+
+        self.ui.smartDiameterSelection.stateChanged.connect(self.checkBoxStateChanged)
 
         # Make sure parameter node is initialized (needed for module reload)
         self.initializeParameterNode()
@@ -492,15 +498,19 @@ class VSMODWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
             and direction_point.GetNumberOfControlPoints()
         ):
             self.ui.createBranch.enabled = True
+            self.ui.smartDiameterSelection.blockSignals(True)
             if len(self.graph_branches.names) == 0:
                 self.ui.createBranch.text = "Create Root"
                 self.ui.createBranch.toolTip = "Create Root."
-                self.ui.useLastTrackedRadius.enabled = False
-                self.ui.useLastTrackedRadius.checked = False
+                self.ui.smartDiameterSelection.enabled = False
+                self.ui.smartDiameterSelection.checked = False
+                self.ui.measureDiameterButton.enabled = True
+                self.ui.diameter.enabled = True
             else:
                 self.ui.createBranch.text = "Create New Branch"
                 self.ui.createBranch.toolTip = "Create New Branch."
-                self.ui.useLastTrackedRadius.enabled = True
+                self.ui.smartDiameterSelection.enabled = True
+            self.ui.smartDiameterSelection.blockSignals(False)
         else:
             self.ui.createBranch.toolTip = "Select all input before creating branch."
             self.ui.createBranch.enabled = False
@@ -508,7 +518,7 @@ class VSMODWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         if len(self.graph_branches.names) != 0:
             self.ui.clearTree.toolTip = "Clear all tree."
             self.ui.clearTree.enabled = True
-            self.ui.exportTreeButton.toolTip = "Export the network X graph of the centerlines and contour points as JSON and pickle."
+            self.ui.exportTreeButton.toolTip = "Export the Network X graph of the centerlines and contour points as JSON and pickle files."
             self.ui.exportTreeButton.enabled = True
         else:
             self.ui.clearTree.toolTip = "Tree is already empty."
@@ -688,10 +698,11 @@ class VSMODWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
     def checkCanMeasure(self, *args):
         """
-        Enables the measure button if the distance parameter exist.
+        Enables the measure button if the distance parameter exist and the smart diameter selection is disabled.
         """
-        self.ui.measureRadiusButton.enabled = (
+        self.ui.measureDiameterButton.enabled = (
             self.parameterNode.measureDistance is not None
+            and not self.ui.smartDiameterSelection.checked
         )
 
     def measure(self, *args):
@@ -733,7 +744,7 @@ class VSMODWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         """
         Callback when a point of the measuring procedure is placed.
         If both point of the line are placed, enter the measured real world distance between points
-        in the UI radius field.
+        in the UI diameter field.
 
         Each function of this procedure are called through observers callbacks.
         """
@@ -745,8 +756,8 @@ class VSMODWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         if measuring_node.GetNumberOfControlPoints() == 2:
             distance = measuring_node.GetLineLengthWorld()
             if numba_close(distance, 0.0):
-                distance = 0.2
-            self.parameterNode.startingRadius = distance / 2
+                distance = 0.01
+            self.parameterNode.diameter = distance
 
     def measureNodeRemoved(self, *args):
         """
@@ -784,31 +795,29 @@ class VSMODWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
                 width=300,
                 height=50,
             )
-            self.graph_branches = self.logic.processBranch(
+            first_diameter_used = self.logic.processBranch(
                 raw_volume=self.parameterNode.inputVolume,
                 starting_point_list=self.parameterNode.startingPoint,
                 direction_point_list=self.parameterNode.directionPoint,
                 percent_inlier_points=self.parameterNode.percentInlierPoints,
                 inlier_threshold=self.parameterNode.percentThreshold,
-                starting_radius=self.parameterNode.startingRadius,
+                starting_radius=self.parameterNode.diameter
+                / 2,  # Divide by 2 since it's the radius that is asked
                 centerline_resolution=self.parameterNode.centerlineResolution,
                 maximum_turn_angle=self.parameterNode.maximumTurnAngle,
                 min_number_of_attempts=self.parameterNode.minNumberOfAttempts,
                 max_number_of_attempts=self.parameterNode.maxNumberOfAttempts,
                 max_number_of_cylinders=self.parameterNode.maxNumberOfCylinders,
-                use_last_tracked_radius=self.ui.useLastTrackedRadius.checked,
+                smart_diameter_selection=self.ui.smartDiameterSelection.checked,
                 graph_branches=self.graph_branches,
                 isNewBranch=self.ui.createBranch.text == "Create New Branch",
                 progress_dialog=progress_dialog,
             )
 
+            if self.ui.smartDiameterSelection.checked:
+                self.parameterNode.diameter = first_diameter_used
+
             self.recenter3dView()
-
-            # Select the starting markup node to ease future node placement
-            slicer.app.applicationLogic().GetSelectionNode().SetActivePlaceNodeID(
-                self.parameterNode.startingPoint.GetID()
-            )
-
             self.checkCanStartRansac()
             self.checkCanStartSegmentation()
 
@@ -873,16 +882,17 @@ class VSMODWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
             # Create the segments and paint them
             paint_segments(
-                self.parameterNode.inputVolume,
-                self.graph_branches.centerlines,
-                self.graph_branches.names,
-                self.graph_branches.centerline_radius,
-                branch_draw_order,
-                self.segmentationNode,
-                self.parameterNode.reductionFactor,
-                self.parameterNode.reductionThreshold,
-                self.parameterNode.contourDistance,
-                self.ui.mergeAllVessels.checked,
+                volume_node=self.parameterNode.inputVolume,
+                centerlines=self.graph_branches.centerlines,
+                centerline_names=self.graph_branches.names,
+                radius=self.graph_branches.centerline_radius,
+                branch_draw_order=branch_draw_order,
+                segmentation_node=self.segmentationNode,
+                reduction_factor=self.parameterNode.reductionFactor,
+                radius_reduction_threshold=self.parameterNode.diameterReductionThreshold
+                / 2,  # Divide by 2 since it's the radius that is asked
+                contour_distance=self.parameterNode.contourDistance,
+                merge_all_vessels=self.ui.mergeAllVessels.checked,
             )
 
             # Remove segmentation from the UI
@@ -973,6 +983,21 @@ class VSMODWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         self.checkCanStartSegmentation()
         self.recenter3dView()
 
+    def checkBoxStateChanged(self, state: int) -> None:
+        """
+        Disable / enable the diameter box and the diameter button depending on the state of the "Automatic diameter selection" checkbox.
+        The diameter box and button state is enabled when the checkbox is not checked and vice versa.
+
+        Parameters
+        ----------
+        state : int
+            The new state of the checkbox.
+        """
+        self.ui.diameter.enabled = not state
+        self.ui.measureDiameterButton.enabled = (
+            self.parameterNode.measureDistance is not None and not state
+        )
+
 
 #
 # VSMODLogic
@@ -1015,7 +1040,7 @@ class VSMODLogic(ScriptedLoadableModuleLogic):
         min_number_of_attempts: int,
         max_number_of_attempts: int,
         max_number_of_cylinders: int,
-        use_last_tracked_radius: bool,
+        smart_diameter_selection: bool,
         graph_branches: GraphBranches,
         isNewBranch: bool,
         progress_dialog: CustomStatusDialog,
@@ -1036,7 +1061,7 @@ class VSMODLogic(ScriptedLoadableModuleLogic):
         min_number_of_attempts: the minimum number of attempts done to find a fitting cylinder.
         max_number_of_attempts: the maximum number of attempts to find a fitting cylinder.
         max_number_of_cylinders: the maximum number of cylinder tracked in one tracking.
-        use_last_tracked_radius: flag to indicate whether we override the radius value entered with the radius
+        smart_diameter_selection: flag to indicate whether we override the radius value entered with the radius
             of the closest cylinder of the input cylinder.
         graph_branches: object holding the graph of vessels branches.
         isNewBranch: flag to tell if it is the first branch or not.
@@ -1045,8 +1070,8 @@ class VSMODLogic(ScriptedLoadableModuleLogic):
         Returns
         ----------
 
-        GraphBranches
-        Updated graph
+        float
+            the diameter used for the first cylinder
         """
 
         # Prepare the volume object
@@ -1066,7 +1091,7 @@ class VSMODLogic(ScriptedLoadableModuleLogic):
         # Convert degrees into radians
         radians_angle = radians(maximum_turn_angle)
 
-        graph_branches = run_ransac(
+        return run_ransac(
             vol=vol,
             starting_point=starting_point,
             direction_point=direction_point,
@@ -1078,13 +1103,11 @@ class VSMODLogic(ScriptedLoadableModuleLogic):
             min_number_of_attempts=min_number_of_attempts,
             max_number_of_attempts=max_number_of_attempts,
             max_number_of_cylinders=max_number_of_cylinders,
-            use_last_tracked_radius=use_last_tracked_radius,
+            smart_diameter_selection=smart_diameter_selection,
             graph_branches=graph_branches,
             isNewBranch=isNewBranch,
             progress_dialog=progress_dialog,
         )
-
-        return graph_branches
 
 
 #

@@ -161,9 +161,9 @@
            </widget>
           </item>
           <item row="3" column="1">
-           <widget class="qMRMLNodeComboBox" name="measureDistance">
+           <widget class="qMRMLNodeComboBox" name="measureDistanceSelector">
             <property name="toolTip">
-             <string>Select two points to measure the radius of a vessel.</string>
+             <string>Put two points to measure the diameter of a vessel.</string>
             </property>
             <property name="nodeTypes">
              <stringlist>
@@ -197,22 +197,25 @@
          </property>
          <layout class="QFormLayout" name="formLayout_2">
           <item row="3" column="0">
-           <widget class="QLabel" name="startingRadiusLabel">
+           <widget class="QLabel" name="diameterLabel">
             <property name="text">
-             <string>Starting Radius (mm)</string>
+             <string>Diameter (mm)</string>
             </property>
            </widget>
           </item>
           <item row="3" column="1">
-           <widget class="QDoubleSpinBox" name="startingRadius">
+           <widget class="QDoubleSpinBox" name="diameter">
             <property name="toolTip">
-             <string>Select the radius of the starting cylinder radius in millimeter.</string>
+             <string>Enter the vessel diameter in millimeter. Can be measured using the &quot;Measure Diameter&quot; button.</string>
+            </property>
+            <property name="decimals">
+             <number>2</number>
             </property>
             <property name="minimum">
-             <double>0.100000000000000</double>
+             <double>0.000000000000000</double>
             </property>
             <property name="maximum">
-             <double>1000.000000000000000</double>
+             <double>2000.000000000000000</double>
             </property>
             <property name="singleStep">
              <double>0.100000000000000</double>
@@ -221,7 +224,7 @@
              <double>10.000000000000000</double>
             </property>
             <property name="SlicerParameterName" stdset="0">
-             <string>startingRadius</string>
+             <string>diameter</string>
             </property>
            </widget>
           </item>
@@ -235,7 +238,7 @@
           <item row="5" column="1">
            <widget class="QDoubleSpinBox" name="centerlineResolution">
             <property name="toolTip">
-             <string>Select the minimum space allowed between two points in the centerline.</string>
+             <string>Select the minimum space allowed between two points in the centerline. It is a post-tracking refinement.</string>
             </property>
             <property name="minimum">
              <double>0.010000000000000</double>
@@ -252,22 +255,25 @@
            </widget>
           </item>
           <item row="4" column="0">
-           <widget class="QLabel" name="trackedLabel">
+           <widget class="QLabel" name="smartDiameterSelectionLabel">
             <property name="text">
-             <string>Use Last Tracked Radius</string>
+             <string>Automatic Diameter Selection</string>
             </property>
            </widget>
           </item>
           <item row="4" column="1">
-           <widget class="QCheckBox" name="useLastTrackedRadius">
+           <widget class="QCheckBox" name="smartDiameterSelection">
             <property name="enabled">
              <bool>false</bool>
             </property>
             <property name="toolTip">
-             <string>Check if you want the entered radius value to be overridden by the radius of the cylinder closest to your starting cylinder.</string>
+             <string>Cannot be activated for the first vessel. if checked, the Diameter parameter is automatically set.</string>
             </property>
             <property name="text">
              <string/>
+            </property>
+            <property name="tristate">
+             <bool>false</bool>
             </property>
            </widget>
           </item>
@@ -285,15 +291,15 @@
            </widget>
           </item>
           <item row="1" column="1">
-           <widget class="QPushButton" name="measureRadiusButton">
+           <widget class="QPushButton" name="measureDiameterButton">
             <property name="enabled">
              <bool>false</bool>
             </property>
             <property name="toolTip">
-             <string>Start a new placing phase to measure the radius of a vessel.</string>
+             <string>Start a new placing phase to measure the diameter of a vessel.</string>
             </property>
             <property name="text">
-             <string>Measure Radius</string>
+             <string>Measure Diameter (mm)</string>
             </property>
            </widget>
           </item>
@@ -354,7 +360,7 @@
              <enum>Qt::TabFocus</enum>
             </property>
             <property name="toolTip">
-             <string>Select the threshold for which a point is considered inlier. X % of previous cylinder radius.</string>
+             <string>Select the threshold for which a point is considered inlier. X % of the radius value.</string>
             </property>
             <property name="maximum">
              <double>100.000000000000000</double>
@@ -370,7 +376,7 @@
           <item row="3" column="0">
            <widget class="QLabel" name="angleLabel">
             <property name="text">
-             <string>Maximum cylinder turn angle</string>
+             <string>Maximum inter-cylinder angle (°)</string>
             </property>
            </widget>
           </item>
@@ -393,20 +399,23 @@
           <item row="4" column="0">
            <widget class="QLabel" name="minAttemptsLabel">
             <property name="text">
-             <string>Minimum number of attempts per cylinder</string>
+             <string>Min Attempts per Cylinder</string>
             </property>
            </widget>
           </item>
           <item row="4" column="1">
            <widget class="QSpinBox" name="minNumberOfAttempts">
             <property name="toolTip">
-             <string>Select the minimum number of tries the algorithm will take to fit a cylinder.</string>
+             <string>Defines the minimum number of attempts made before selecting the best-fitting cylinder for a vessel part, ensuring sufficient sampling.</string>
             </property>
             <property name="maximum">
              <number>99999999</number>
             </property>
             <property name="singleStep">
              <number>1000</number>
+            </property>
+            <property name="value">
+             <number>20000</number>
             </property>
             <property name="SlicerParameterName" stdset="0">
              <string>minNumberOfAttempts</string>
@@ -416,14 +425,14 @@
           <item row="5" column="0">
            <widget class="QLabel" name="maxAttemptsLabel">
             <property name="text">
-             <string>Maximum number of attempts per cylinder</string>
+             <string>Max Attempts per Cylinder</string>
             </property>
            </widget>
           </item>
           <item row="5" column="1">
            <widget class="QSpinBox" name="maxNumberOfAttempts">
             <property name="toolTip">
-             <string>Select the maximum number of tries the algorithm will take to fit a cylinder.</string>
+             <string>Defines the maximum number of extra attempts made to fit a cylinder to a vessel segment, limiting the number of iterations for computational efficiency, if a good enought cylinder has not been met yet.</string>
             </property>
             <property name="minimum">
              <number>0</number>
@@ -435,7 +444,10 @@
              <number>1000</number>
             </property>
             <property name="value">
-             <number>1000</number>
+             <number>10000</number>
+            </property>
+            <property name="displayIntegerBase">
+             <number>10</number>
             </property>
             <property name="SlicerParameterName" stdset="0">
              <string>maxNumberOfAttempts</string>
@@ -445,14 +457,14 @@
           <item row="6" column="0">
            <widget class="QLabel" name="maximumNumberOfCylinderLabel">
             <property name="text">
-             <string>Maximum number of cylinder to find</string>
+             <string>Max Cylinders per Vessel</string>
             </property>
            </widget>
           </item>
           <item row="6" column="1">
            <widget class="QSpinBox" name="maxNumberOfCylinders">
             <property name="toolTip">
-             <string>Select the maximum number of cylinder the algorithm will try to find in one tracking.</string>
+             <string>Defines the upper limit on the number of cylinders per vessel to prevent the algorithm from running indefinitely.</string>
             </property>
             <property name="minimum">
              <number>1</number>
@@ -487,10 +499,10 @@
        <item>
         <widget class="QPushButton" name="exportTreeButton">
          <property name="toolTip">
-          <string>Export the network X graph of the centerlines and contour points as JSON and pickle.</string>
+          <string>Export the Network X graph of the centerlines and contour points as JSON and pickle files.</string>
          </property>
          <property name="text">
-          <string>Export Tree as Graph</string>
+          <string>Export Tree as graph</string>
          </property>
         </widget>
        </item>
@@ -500,7 +512,7 @@
           <string>Load a tree architecture from a directory.</string>
          </property>
          <property name="text">
-          <string>Load Tree Architecture</string>
+          <string>Load Tree from graph (json)</string>
          </property>
         </widget>
        </item>
@@ -553,7 +565,7 @@
        <item>
         <widget class="QPushButton" name="lockButton">
          <property name="toolTip">
-          <string>Disable / enable interractions with the whole tree.</string>
+          <string>Disable / enable interractions with the centerline and contours points in the 3D Slicer scene.</string>
          </property>
          <property name="text">
           <string>Lock Tree</string>
@@ -628,7 +640,7 @@
              <enum>Qt::TabFocus</enum>
             </property>
             <property name="toolTip">
-             <string>Select the proportion by which a vessel's radius is reduced after the reduction threshold. </string>
+             <string>Select the proportion by which a vessel's diameter is reduced after the reduction threshold. </string>
             </property>
             <property name="singleStep">
              <double>0.010000000000000</double>
@@ -648,28 +660,28 @@
            </widget>
           </item>
           <item row="1" column="0">
-           <widget class="QLabel" name="radiusLoweringThresholdLabel">
+           <widget class="QLabel" name="diameterLoweringThresholdLabel">
             <property name="text">
-             <string>Radius Lowering Threshold (mm)</string>
+             <string>Diameter Lowering Threshold (mm)</string>
             </property>
            </widget>
           </item>
           <item row="1" column="1">
-           <widget class="QDoubleSpinBox" name="reductionThreshold">
+           <widget class="QDoubleSpinBox" name="diameterReductionThreshold">
             <property name="toolTip">
              <string>Select the reduction threshold. </string>
             </property>
             <property name="maximum">
-             <double>1000.000000000000000</double>
+             <double>2000.000000000000000</double>
             </property>
             <property name="singleStep">
              <double>0.010000000000000</double>
             </property>
             <property name="value">
-             <double>5.000000000000000</double>
+             <double>10.000000000000000</double>
             </property>
             <property name="SlicerParameterName" stdset="0">
-             <string>reductionThreshold</string>
+             <string>diameterReductionThreshold</string>
             </property>
            </widget>
           </item>
@@ -683,7 +695,7 @@
           <item row="2" column="1">
            <widget class="QSpinBox" name="contourDistance">
             <property name="toolTip">
-             <string>Select the distance between the edges of the vessels and the vessel contours.</string>
+             <string>Configures the size of the gap between the vessels and the external boundary. The external boundary is here to define an &quot;out of vessel&quot; region of the region growing algorithm.</string>
             </property>
             <property name="minimum">
              <number>1</number>
@@ -740,7 +752,7 @@
           <string>Create or update a segmentation node. It needs input volume and a branch.</string>
          </property>
          <property name="text">
-          <string>Create Segmentation from Branches</string>
+          <string>Create Segmentation Seeds</string>
          </property>
         </widget>
        </item>
@@ -812,9 +824,9 @@
   <tabstop>inputsCollapsibleButton</tabstop>
   <tabstop>configurationCollapsibleButton</tabstop>
   <tabstop>placePointButton</tabstop>
-  <tabstop>measureRadiusButton</tabstop>
-  <tabstop>startingRadius</tabstop>
-  <tabstop>useLastTrackedRadius</tabstop>
+  <tabstop>measureDiameterButton</tabstop>
+  <tabstop>diameter</tabstop>
+  <tabstop>smartDiameterSelection</tabstop>
   <tabstop>centerlineResolution</tabstop>
   <tabstop>advancedOptionCollpasibleButton</tabstop>
   <tabstop>inlierPoints</tabstop>
@@ -833,7 +845,7 @@
   <tabstop>showContourPointsButton</tabstop>
   <tabstop>segmentationCollapsibleButton</tabstop>
   <tabstop>reductionFactor</tabstop>
-  <tabstop>reductionThreshold</tabstop>
+  <tabstop>diameterReductionThreshold</tabstop>
   <tabstop>contourDistance</tabstop>
   <tabstop>mergeAllVessels</tabstop>
   <tabstop>paintButton</tabstop>
@@ -907,7 +919,7 @@
   <connection>
    <sender>VSMOD</sender>
    <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
-   <receiver>measureDistance</receiver>
+   <receiver>measureDistanceSelector</receiver>
    <slot>setMRMLScene(vtkMRMLScene*)</slot>
    <hints>
     <hint type="sourcelabel">

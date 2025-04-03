@@ -143,11 +143,11 @@ def run_ransac(
     min_number_of_attempts: int,
     max_number_of_attempts: int,
     max_number_of_cylinders: int,
-    use_last_tracked_radius: bool,
+    smart_diameter_selection: bool,
     graph_branches: GraphBranches,
     isNewBranch: bool,
     progress_dialog: CustomStatusDialog,
-) -> GraphBranches:
+) -> float:
     """
     Run the RANSAC algorithm to fit a cylinder according to the parameters indicated by the user.
 
@@ -167,7 +167,7 @@ def run_ransac(
     min_number_of_attempts: the minimum number of attempts done to find a fitting cylinder.
     max_number_of_attempts: the maximum number of attempts to find a fitting cylinder.
     max_number_of_cylinders: the maximum number of cylinder tracked in one tracking.
-    use_last_tracked_radius: flag to indicate whether we override the radius value entered with the radius
+    smart_diameter_selection: flag to indicate whether we override the radius value entered with the radius
         of the closest cylinder of the input cylinder.
     graph_branches: the graph branch object.
     isNewBranch: flag to tell if it is the first branch or not.
@@ -176,8 +176,8 @@ def run_ransac(
     Returns
     ----------
 
-    GraphBranches
-    Updated graph
+    float
+        the diameter used for the first cylinder
     """
     # Input info for branch tracking (in RAS coordinates)
     if isNewBranch:
@@ -232,7 +232,7 @@ def run_ransac(
     )
 
     # Initialize tracking
-    if end_center_radius and use_last_tracked_radius:
+    if end_center_radius and smart_diameter_selection:
         starting_radius = end_center_radius[0]
     cyl = Cylinder(starting_point, starting_radius, direction_point, height=0)
 
@@ -298,5 +298,4 @@ def run_ransac(
         graph_branches.extend_root_from_begin(
             centerline, contour_points, centerline_radius, idx_cb
         )
-
-    return graph_branches
+    return starting_radius * 2

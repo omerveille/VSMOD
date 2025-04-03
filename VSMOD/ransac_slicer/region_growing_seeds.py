@@ -153,7 +153,7 @@ def paint_segments(
     branch_draw_order: list[int],
     segmentation_node: slicer.vtkMRMLSegmentationNode,
     reduction_factor: float,
-    reduction_threshold: float,
+    radius_reduction_threshold: float,
     contour_distance: int,
     merge_all_vessels: bool,
 ) -> np.ndarray:
@@ -169,7 +169,7 @@ def paint_segments(
     radius: list of radius of each centerline points.
     branch_draw_order: list of indexes in which branch will be drawn.
     segmentation_node: segmentation_node on which segment will be added and updated.
-    reduction_threshold: threshold from which a reduction is applied to the radius.
+    radius_reduction_threshold: threshold from which a reduction is applied to the radius.
     reduction_factor: amount of the reduction.
     contour_distance: distance in voxel between the vessel and the contour.
     merge_all_vessels: if True, this flag will put every vessels in the same segment, instead of separeted ones.
@@ -240,7 +240,9 @@ def paint_segments(
     ijk_radius_thresholded = [
         [
             [
-                np.array([_adapt_radius(r, reduction_threshold, reduction_factor)] * 3)
+                np.array(
+                    [_adapt_radius(r, radius_reduction_threshold, reduction_factor)] * 3
+                )
                 / voxel_spacing
                 for r in radius_part
             ]
@@ -336,7 +338,7 @@ def paint_segments(
         [centerline_part, [np.array([r] * 3) / voxel_spacing for r in radius_part]]
         for (centerline, radius_per_centerline) in zip(centerlines, radius)
         for (centerline_part, radius_part) in zip(centerline, radius_per_centerline)
-        if any(map(lambda x: x > reduction_threshold, radius_part))
+        if any(map(lambda x: x > radius_reduction_threshold, radius_part))
     ]
 
     for points, points_radius in centerline_and_radius:

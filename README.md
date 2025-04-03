@@ -23,7 +23,7 @@ The vessels are defined by a centerline, an evolving radius along the centerline
 
 To perform a full modeling process, follow these three steps:
 
-1) Place points to indicate the vessel's direction and radius.
+1) Place points to indicate the vessel's direction and diameter.
 2) Start a centerline segmentation from these points; repeat steps 1 and 2 until you have captured all desired vessels.
 3) Once all vessels are defined, paint the segmentation to generate an initial region-growing seed.
 
@@ -57,7 +57,7 @@ You must select a volume, a starting point, a list of direction points, and a di
 
 Once the prerequisites are met, click on the `Place a new starting and direction point` button to add two points: one indicating the starting position and the other indicating the direction for the algorithm to follow.
 
-Next, measure the vessel's radius near your previously placed points. Click the `Measure radius` button, then place two points along the vessel's diameter; the measured value will be automatically entered in the radius field. Alternatively, if you prefer not to measure the radius again, check the `Use Last Tracked Radius` box to use the radius from the closest previously fitted cylinder.
+Next, measure the vessel's diameter near your previously placed points. Click the `Measure diameter` button, then place two points along the vessel's diameter; the measured value will be automatically entered in the diameter field. Alternatively, if you prefer not to measure the diameter again, check the `Automatic Diameter Selection` box to use the diameter from the closest previously fitted cylinder.
 
 Additionally, you can configure the `Centerline Resolution` parameter to ensure that a point is generated at least every X mm, which refines the centerline after tracking.
 
@@ -77,7 +77,7 @@ If the centerline is correct until a certain point where it is not, you can dele
 This correction is also available for the beginning of the root which can be removed as well.
 [remove_end_of_branch.webm](https://github.com/Leirbag-gabrieL/PulmonaryArteriesSegmentor/assets/91014653/2d9fdb01-f2fb-41e1-b7aa-c03342710ef3)
 
-If you want, you can also save the hierarchy of all the vessel points into a NetworkX graph, which is exported in `.json` and `.pickle` files. The json file can later be used to reload a previous hierarchy thanks to the `load Tree Architecture button`.
+If you want, you can also save the hierarchy of all the vessel points into a NetworkX graph, which is exported in `.json` and `.pickle` files. The json file can later be used to reload a previous hierarchy thanks to the `Load Tree from graph` button.
 
 [save_as_json.webm](https://github.com/Leirbag-gabrieL/PulmonaryArteriesSegmentor/assets/91014653/6ae7029b-8293-400b-9ad5-b8aa047892c5)
 
@@ -95,15 +95,15 @@ Here is an illustration showing a point cloud with points at distances between 0
 These are the configurable parameters of the RANSAC algorithm, and their meaning:
 
 - `Inlier points`: A threshold parameter defining the minimum number of inliers required for a cylinder to be considered valid.
-- `Threshold`: The maximum allowed distance (as a fraction of the previous cylinder's radius) for a point to be considered an inlier. For example, if the previous cylinder radius is 1 mm, a point 1.2 mm away is considered an inlier with a threshold of 33%, since \(1.2 - 1 = 0.2\) and \(0.2 < 0.33\).
-- `Maximum cylinder turn angle`: The maximum angle allowed between two consecutive cylinders. For highly curved vessels, you may set this value near 90°; for straighter vessels, closer to 60°.
-- `Minimum number of attempts per cylinder`: The minimum number of attempts the algorithm will make to find a suitable cylinder.
-- `Maximum number of attempts per cylinder`: The maximum number of attempts the algorithm will make if it does not find a suitable cylinder. (Thus, the actual number of tries will lie in the interval \([minimum, minimum + maximum]\).)
-- `Maximum number of cylinders to find`: The maximum number of cylinders the algorithm can fit during a single tracking session.
+- `Threshold`: The maximum allowed distance (as a fraction of the cylinder's radius) for a point to be considered an inlier. For example, if the previous cylinder radius is 1 mm, a point 1.2 mm away is considered an inlier with a threshold of 33%, since \(1.2 - 1 = 0.2\) and \(0.2 < 0.33\).
+- `Maximum inter-cylinder angle`: The maximum angle allowed between two consecutive cylinders. For highly curved vessels, you may set this value near 90°; for straighter vessels, closer to 60°.
+- `Min Attempts per Cylinder`: The minimum number of attempts the algorithm will make to find a suitable cylinder.
+- `Max Attempts per Cylinder`: The maximum number of attempts the algorithm will make if it does not find a suitable cylinder. (Thus, the actual number of tries will lie in the interval \([minimum, minimum + maximum]\).)
+- `Max Cylinders per Vessel`: The maximum number of cylinders the algorithm can fit during a single tracking session.
 
 ### The segmentation tab 🧩
 
-The segmentation tab is straightforward. You have a button labeled `Create Segmentation from Branches`. Clicking this button generates a new segmentation, which serves as the initialization for 3D Slicer's region-growing algorithm. You can further adjust or edit the generated segmentation using the segmentation widget.
+The segmentation tab is straightforward. You have a button labeled `Create Segmentation Seeds`. Clicking this button generates a new segmentation, which serves as the initialization for 3D Slicer's region-growing algorithm. You can further adjust or edit the generated segmentation using the segmentation widget.
 
 [generating_segmentation_start.webm](https://github.com/Leirbag-gabrieL/PulmonaryArteriesSegmentor/assets/91014653/1a677776-0755-4805-862d-9bb474498c92)
 
@@ -117,14 +117,14 @@ Through the `Segmentation Options` panel, you can further adjust how the segment
 
 Two parameters help to avoid over-segmentation of large vessels:
 
-- `Reduction Factor` and `Radius Lowering Threshold`: These reduce the radius of vessels that exceed a certain threshold by a given factor. For instance, the following code demonstrates the process:
+- `Reduction Factor` and `Diameter Lowering Threshold`: These reduce the diameter of vessels that exceed a certain threshold by a given factor. For instance, the following code demonstrates the process:
 
 ```python
-if radius <= reduction_threshold:
-  segmented_radius = radius
+if diameter <= reduction_threshold:
+  segmented_diameter = diameter
 else:
-  # This ensures a continuous transition of the radius values.
-  segmented_radius = (radius - reduction_threshold) * reduction_factor + reduction_threshold
+  # This ensures a continuous transition of the diameter values.
+  segmented_diameter = (diameter - reduction_threshold) * reduction_factor + reduction_threshold
 ```
 
 - `Distance of Contour Region`: Configures the gap between the vessels and the external boundary.

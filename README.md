@@ -77,7 +77,7 @@ If the centerline is correct until a certain point where it is not, you can dele
 This correction is also available for the beginning of the root which can be removed as well.
 [remove_end_of_branch.webm](https://github.com/Leirbag-gabrieL/PulmonaryArteriesSegmentor/assets/91014653/2d9fdb01-f2fb-41e1-b7aa-c03342710ef3)
 
-If you want, you can also save the hierarchy of all the vessel points into a NetworkX graph, which is exported in `.json` and `.pickle` files. The json file can later be used to reload a previous hierarchy thanks to the `Load Tree from graph` button.
+If you want, you can also save the hierarchy of all the vessel points into a NetworkX graph, which is exported in a `.json` file. The json file can later be used to reload a previous hierarchy thanks to the `Load Tree from graph` button.
 
 [save_as_json.webm](https://github.com/Leirbag-gabrieL/PulmonaryArteriesSegmentor/assets/91014653/6ae7029b-8293-400b-9ad5-b8aa047892c5)
 

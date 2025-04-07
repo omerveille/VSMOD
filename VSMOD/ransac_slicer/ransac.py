@@ -42,7 +42,7 @@ def interpolate_point(
     radius_diff = cyl_1.radius - cyl_0.radius
     nb_points = int(np.linalg.norm(direction) // distance)
 
-    centers, contour_points = [], []
+    cylinders = []
 
     centers_radius = zip(
         [
@@ -55,25 +55,17 @@ def interpolate_point(
         ],
     )
     for center, radius in centers_radius:
-        cyl = Cylinder(center=center, radius=radius, direction=cyl_1.center - center)
-        inliers = None
-        tries = 0
+        cyl = Cylinder(center=center, radius=radius, direction=direction)
+        cyl = sample_around_cylinder(vol, cyl, cfg)
 
-        # Maximum number of interpolation attempt is 5
-        while inliers is None and tries < 5:
-            inliers = sample_around_cylinder(vol, cyl, cfg)
-            tries += 1
+        if cyl is not None:
+            cylinders.append(cyl)
 
-        if inliers is not None:
-            centers.append(center)
-            contour_points.append(inliers)
-
-    return centers, contour_points
+    return cylinders
 
 
 def interpolate_centerline(
     cylinders: list[Cylinder],
-    contour_points: list[list[np.ndarray]],
     vol: Volume,
     cfg: Config,
     distance: float,
@@ -101,7 +93,7 @@ def interpolate_centerline(
     list[float]
     A list of underestimated radius, each center point has an underestimated radius.
     """
-    new_centerline, new_contour = [cylinders[0].center], [contour_points[0]]
+    new_centerline = [cylinders[0]]
 
     for idx in CustomProgressBar(
         iterable=range(len(cylinders) - 1),
@@ -109,26 +101,18 @@ def interpolate_centerline(
         windowTitle="Interpolating centerline points...",
         width=300,
     ):
-        tmp_centerline, tmp_contour_points = interpolate_point(
+        tmp_centerline = interpolate_point(
             cylinders[idx],
             cylinders[idx + 1],
             vol,
             cfg,
             distance,
         )
-        tmp_centerline.append(cylinders[idx + 1].center)
-        tmp_contour_points.append(contour_points[idx + 1])
-        new_centerline.extend(tmp_centerline)
-        new_contour.extend(tmp_contour_points)
 
-    return (
-        np.array(new_centerline),
-        new_contour,
-        [
-            np.linalg.norm(cp - c, axis=1).min()
-            for cp, c in zip(new_contour, new_centerline)
-        ],
-    )
+        new_centerline += tmp_centerline
+        new_centerline.append(cylinders[idx + 1])
+
+    return new_centerline
 
 
 def run_ransac(
@@ -145,7 +129,6 @@ def run_ransac(
     max_number_of_cylinders: int,
     smart_diameter_selection: bool,
     graph_branches: GraphBranches,
-    isNewBranch: bool,
     progress_dialog: CustomStatusDialog,
 ) -> float:
     """
@@ -179,44 +162,29 @@ def run_ransac(
     float
         the diameter used for the first cylinder
     """
-    # Input info for branch tracking (in RAS coordinates)
-    if isNewBranch:
+    creating_root = len(graph_branches.branch_list) == 0
+    if not creating_root:
         _, _, idx_cb, idx_cyl = closest_branch(
             starting_point, graph_branches.branch_list
         )
-        if idx_cyl == len(graph_branches.centerlines[idx_cb]) - 2:
-            idx_cyl = len(graph_branches.centerlines[idx_cb]) - 1
+        # We do not allow branches made out of 1 point
+        if idx_cyl == len(graph_branches.branch_list[idx_cb]) - 2:
+            idx_cyl = len(graph_branches.branch_list[idx_cb]) - 1
 
-        # Update Graph
         parent_node = graph_branches.names[idx_cb]
         # Case when the closest node is the last point of a branch, we concatenate the two branches
-        if idx_cyl == len(graph_branches.centerlines[idx_cb]) - 1:
-            end_centerline, end_center_radius, end_contour_point = (
-                graph_branches.centerlines[idx_cb][idx_cyl : idx_cyl + 1],
-                graph_branches.centerline_radius[idx_cb][idx_cyl : idx_cyl + 1],
-                graph_branches.contours_points[idx_cb][idx_cyl : idx_cyl + 1],
-            )
+        if idx_cyl == len(graph_branches.branch_list[idx_cb]) - 1:
+            end_centerline = graph_branches.branch_list[idx_cb][idx_cyl]
         # Case when the closest node is the first point of a branch, we had the branch to the parent of the closest branch, thus the branch way have more than 2 childs
         elif idx_cyl == 0:
             parent_node = graph_branches.tree_widget.getParentNodeId(parent_node)
-            end_centerline, end_center_radius, end_contour_point = (
-                graph_branches.centerlines[idx_cb][:1],
-                graph_branches.centerline_radius[idx_cb][:1],
-                graph_branches.contours_points[idx_cb][:1],
-            )
+            end_centerline = graph_branches.branch_list[idx_cb][0]
         # Case when the closest node is in the middle of a branch, we split the branch at the intersection point
         else:
-            (
-                end_centerline,
-                end_center_radius,
-                end_contour_point,
-            ) = graph_branches.split_branch(idx_cb, idx_cyl, parent_node)
+            end_centerline = graph_branches.split_branch(idx_cb, idx_cyl, parent_node)
     else:
         parent_node = None
-        graph_branches.nodes.append(starting_point)
-        end_centerline = np.empty((0, 3))
-        end_center_radius = []
-        end_contour_point = []
+        end_centerline = None
 
     direction_point = direction_point - starting_point
     # Tracking configuration
@@ -231,71 +199,59 @@ def run_ransac(
         nb_iter=max_number_of_cylinders,
     )
 
-    # Initialize tracking
-    if end_center_radius and smart_diameter_selection:
-        starting_radius = end_center_radius[0]
+    # Initialize first cylinder
+    if not creating_root and smart_diameter_selection:
+        starting_radius = end_centerline.radius
     cyl = Cylinder(starting_point, starting_radius, direction_point, height=0)
 
     # Perform tracking
-    centerline, contour_points, centerline_radius, cylinders = track_branch(
+    cylinders = track_branch(
         vol,
         cyl,
         cfg,
-        end_centerline,
-        end_center_radius,
-        end_contour_point,
         [elt for branch in graph_branches.branch_list for elt in branch],
         progress_dialog,
     )
 
-    if len(centerline) <= 1:
+    # Check for tracking failure
+    if len(cylinders) <= 1:
         msg = qt.QMessageBox()
         msg.setIcon(qt.QMessageBox.Critical)
         msg.setWindowTitle("Error")
         msg.setText("Could not find any branch")
         msg.exec_()
         graph_branches.on_merge_only_child(parent_node)
-        return graph_branches
+        return starting_radius * 2
 
-    # In the case of a split, we add the closest point to the cylinders list so the space inbetween can be interpolated aswell
-    if len(centerline) - 1 == len(cylinders):
-        cylinders.insert(
-            0,
-            Cylinder(
-                center=centerline[0],
-                radius=centerline_radius[0],
-                direction=centerline[1] - centerline[0],
-            ),
-        )
+    # Add the first node if we just created the root
+    if creating_root:
+        graph_branches.nodes.append(cylinders[0].center)
+    else:
+        # We add the closest point to the cylinders list so the space inbetween can be interpolated aswell
+        cylinders.insert(0, end_centerline)
 
     # Interpolate points
-    centerline, contour_points, centerline_radius = interpolate_centerline(
+    cylinders = interpolate_centerline(
         cylinders,
-        contour_points,
         vol,
         cfg,
         distance=centerline_resolution,
     )
-    del cylinders
 
     # Case of a split branch / new root / concatenation of branches
-    if not isNewBranch or parent_node is not None:
-        graph_branches.nodes.append(centerline[-1])
+    if creating_root or parent_node is not None:
+        graph_branches.nodes.append(cylinders[-1].center)
         edge_begin = (
             graph_branches.edges[graph_branches.names.index(parent_node)][1]
-            if isNewBranch
+            if not creating_root
             else len(graph_branches.nodes) - 2
         )
         graph_branches.create_new_branch(
             (edge_begin, len(graph_branches.nodes) - 1),
-            centerline,
-            contour_points,
-            centerline_radius,
+            cylinders,
             parent_node,
         )
     # Case when we are creating a new branch extending the root before the initial point (the only case of backward extension)
     else:
-        graph_branches.extend_root_from_begin(
-            centerline, contour_points, centerline_radius, idx_cb
-        )
+        graph_branches.extend_root_from_begin(cylinders, idx_cb)
     return starting_radius * 2

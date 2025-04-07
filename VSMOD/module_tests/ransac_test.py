@@ -2,12 +2,15 @@ import unittest
 
 import numpy as np
 import qt
+import networkx as nx
+from networkx.readwrite import json_graph
+import json
 import slicer
 from ransac_slicer.branch_tree import BranchTree
 from ransac_slicer.cylinder_ransac import (
     Config,
 )
-from ransac_slicer.graph_branches import GraphBranches
+from ransac_slicer.graph_branches import GraphBranches, restore_lists_from_graph
 from ransac_slicer.popup_utils import CustomStatusDialog
 from ransac_slicer.ransac import interpolate_centerline, interpolate_point, run_ransac
 from ransac_slicer.volume import Volume
@@ -38,46 +41,50 @@ class RansacTest(unittest.TestCase):
         )
 
         cls.resources_path = get_resources_path().joinpath("ransac")
+        graph_path = get_resources_path().joinpath("graph_tree.json")
+        with open(graph_path) as f:
+            js_graph = json.load(f)
+        graph: nx.DiGraph = json_graph.node_link_graph(js_graph)
+        branch_list, _, _, _, _ = restore_lists_from_graph(graph)
+        cls.cyl_0 = branch_list[0][0]
+        cls.cyl_1 = branch_list[0][5]
+        cls.cylinders_to_interpolate = branch_list[0]
 
     def test_01_interpolate_point(self):
-        cyl_0 = load_object_from_path(self.resources_path.joinpath("cyl_0.pickle"))
-        cyl_1 = load_object_from_path(self.resources_path.joinpath("cyl_1.pickle"))
-
-        centers, _ = interpolate_point(
-            cyl_0=cyl_0, cyl_1=cyl_1, vol=self.vol, cfg=self.cfg, distance=0.1
+        cylinders = interpolate_point(
+            cyl_0=self.cyl_0, cyl_1=self.cyl_1, vol=self.vol, cfg=self.cfg, distance=0.1
         )
-        self.assertGreaterEqual(len(centers), 2)
+        self.assertGreaterEqual(len(cylinders), 2)
 
-        centers, _ = interpolate_point(
-            cyl_0=cyl_0, cyl_1=cyl_1, vol=self.vol, cfg=self.cfg, distance=1000
-        )
-        self.assertEqual(len(centers), 0)
-
-    def test_02_interpolate_centerline(self):
-        cylinders = load_object_from_path(
-            self.resources_path.joinpath("cyl_list.pickle")
-        )
-        contour_points = load_object_from_path(
-            self.resources_path.joinpath("contour_points_cylinders.pickle")
-        )
-
-        centerline, _, _ = interpolate_centerline(
-            cylinders=cylinders,
-            contour_points=contour_points,
-            vol=self.vol,
-            cfg=self.cfg,
-            distance=0.4,
-        )
-        self.assertGreaterEqual(centerline.shape[0], len(cylinders))
-
-        centerline, _, _ = interpolate_centerline(
-            cylinders=cylinders,
-            contour_points=contour_points,
+        cylinders = interpolate_point(
+            cyl_0=self.cyl_0,
+            cyl_1=self.cyl_1,
             vol=self.vol,
             cfg=self.cfg,
             distance=1000,
         )
-        self.assertEqual(centerline.shape[0], len(cylinders))
+        self.assertEqual(len(cylinders), 0)
+
+    def test_02_interpolate_centerline(self):
+        cylinders_interpolated = interpolate_centerline(
+            cylinders=self.cylinders_to_interpolate,
+            vol=self.vol,
+            cfg=self.cfg,
+            distance=0.4,
+        )
+        self.assertGreaterEqual(
+            len(cylinders_interpolated), len(self.cylinders_to_interpolate)
+        )
+
+        cylinders_interpolated = interpolate_centerline(
+            cylinders=self.cylinders_to_interpolate,
+            vol=self.vol,
+            cfg=self.cfg,
+            distance=1000,
+        )
+        self.assertEqual(
+            len(cylinders_interpolated), len(self.cylinders_to_interpolate)
+        )
 
     def test_03_run_ransac(self):
         starting_point = load_object_from_path(
@@ -121,6 +128,5 @@ class RansacTest(unittest.TestCase):
             max_number_of_cylinders=1000,
             smart_diameter_selection=False,
             graph_branches=graph_branches,
-            isNewBranch=False,
             progress_dialog=progress_dialog,
         )

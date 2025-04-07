@@ -1,7 +1,6 @@
 from typing import Union
 import networkx as nx
 from networkx.readwrite import json_graph
-import pickle
 import json
 import numpy as np
 from .popup_utils import CustomProgressBar
@@ -31,12 +30,8 @@ def restore_lists_from_graph(graph: nx.DiGraph):
     """
     branch_list = []
     names = []
-    centerlines = []
-    contours_points = []
-    centerline_radius = []
     edges = []
     nodes = []
-    markup_list_to_create = []
     edge_name_table = {0: None}
 
     for a, b in CustomProgressBar(
@@ -46,15 +41,26 @@ def restore_lists_from_graph(graph: nx.DiGraph):
         width=300,
     ):
         # Restoring lists
-        branch_list.append(
-            [Cylinder(center=np.array(cp)) for cp in graph[a][b]["centerline"]]
-        )
         names.append(graph[a][b]["name"])
-        centerlines.append(np.array(graph[a][b]["centerline"]))
-        contours_points.append(graph[a][b]["contour_points"])
-        # Recompute radius
-        centerline_radius.append(
-            [
+        edges.append((a, b))
+        edge_name_table[b] = graph[a][b]["name"]
+
+        centers = graph[a][b]["centerline"]
+        # (THE SECOND PART IS TO REMOVE LATER ITS AN ARTIFACT FROM THE PAST)
+        radius = graph[a][b].get("radius", None)
+        # (THE SECOND PART IS TO REMOVE LATER ITS AN ARTIFACT FROM THE PAST)
+        directions = graph[a][b].get(
+            "direction",
+            [np.array([0, 0, 1], dtype=np.float64) for _ in range(len(centers))],
+        )
+        # (THE SECOND PART IS TO REMOVE LATER ITS AN ARTIFACT FROM THE PAST)
+        heights = graph[a][b].get("height", [-1 for _ in range(len(centers))])
+        contour_points = graph[a][b]["contour_points"]
+
+        # (TO REMOVE ITS AN ARTIFACT FROM THE PAST)
+        # Recompute radius if not existant
+        if radius is None:
+            radius = [
                 np.linalg.norm(
                     np.array(graph[a][b]["contour_points"][k])
                     - np.array(graph[a][b]["centerline"][k]),
@@ -62,16 +68,15 @@ def restore_lists_from_graph(graph: nx.DiGraph):
                 ).min()
                 for k in range(len(graph[a][b]["centerline"]))
             ]
+
+        branch_list.append(
+            [
+                Cylinder(center=c, radius=r, direction=d, height=h, contour_points=cp)
+                for c, r, d, h, cp in zip(
+                    centers, radius, directions, heights, contour_points
+                )
+            ]
         )
-        edges.append((a, b))
-        markup_list_to_create.append(
-            (
-                graph[a][b]["name"],
-                np.array(graph[a][b]["centerline"]),
-                graph[a][b]["contour_points"],
-            )
-        )
-        edge_name_table[b] = graph[a][b]["name"]
 
     for node in graph.nodes(data=True):
         nodes.append(node[1]["pos"])
@@ -79,12 +84,8 @@ def restore_lists_from_graph(graph: nx.DiGraph):
     return (
         branch_list,
         names,
-        centerlines,
-        contours_points,
-        centerline_radius,
         edges,
         nodes,
-        markup_list_to_create,
         edge_name_table,
     )
 
@@ -102,31 +103,33 @@ class GraphBranches:
     def __init__(
         self,
         tree_widget: BranchTree,
-        centerline_button,
-        contour_point_button,
-        lock_button,
+        centerline_button: qt.QPushButton,
+        contour_point_button: qt.QPushButton,
+        lock_button: qt.QPushButton,
     ) -> None:
-        self.branch_list = []  # list of shape (n,m) with n = number of branches and m = number of cylinder in the current branch
-        self.nodes = []  # list of nodes which are the birfucation + root + leaves
-        self.edges = []  # list of tuple for edges between nodes
-        self.names = []  # list of names in each edges
-        self.centerlines: list[
+        self.branch_list: list[
+            list[Cylinder]
+        ] = []  # list of shape (n,m) with n = number of branches and m = number of cylinder in the current branch
+        self.nodes: list[
             np.ndarray
-        ] = []  # list of shape (n,m,3) with n = number of branches and m = number of points in the current center line
-        self.contours_points: list[
-            list
-        ] = []  # list of shape (n,m,l,3) with n = number of branches, m = number of points in the current center line and l = number of points in the current contour
-        self.centerline_radius = []  # list of shape (n,m) with n = number of branches and m = the radius of each points of the center line
-        self.centerline_markups = []  # list of markups for centers line
-        self.contour_points_markups = []  # list of markups for contour points
+        ] = []  # list of nodes which are the birfucation + root + leaves
+        self.edges: list[tuple[int, int]] = []  # list of tuple for edges between nodes
+        self.names: list[str] = []  # list of names in each edges
 
-        self.tree_widget = tree_widget
-        self.centerline_button = centerline_button
-        self.contour_point_button = contour_point_button
-        self.lock_button = lock_button
-        self.centerline_text_size = 3.0
+        self.centerline_markups: list[
+            slicer.vtkMRMLMarkupsCurveNode
+        ] = []  # list of markups for centers line
+        self.contour_points_markups: list[
+            slicer.vtkMRMLMarkupsFiducialNode
+        ] = []  # list of markups for contour points
 
-        self.current_tree_item = None
+        self.tree_widget: BranchTree = tree_widget
+        self.centerline_button: qt.QPushButton = centerline_button
+        self.contour_point_button: qt.QPushButton = contour_point_button
+        self.lock_button: qt.QPushButton = lock_button
+        self.centerline_text_size: float = 3.0
+
+        self.current_tree_item: qt.QTreeWidgetItem = None
         self.tree_widget.connect(
             "itemClicked(QTreeWidgetItem *, int)", self.on_item_clicked
         )
@@ -139,9 +142,20 @@ class GraphBranches:
 
         self.node_selected = (-1, -1)
 
-    def create_new_markups(
-        self, name: str, centerline: np.ndarray, contour_points: list[list[np.ndarray]]
-    ):
+    def update_markup(self, branch_idx: int):
+        """ """
+        slicer.util.updateMarkupsControlPointsFromArray(
+            self.centerline_markups[branch_idx],
+            np.array(
+                [cyl.center for cyl in self.branch_list[branch_idx]], dtype=np.float64
+            ),
+        )
+        slicer.util.updateMarkupsControlPointsFromArray(
+            self.contour_points_markups[branch_idx],
+            np.vstack([cyl.contour_points for cyl in self.branch_list[branch_idx]]),
+        )
+
+    def create_new_markup(self, name: str):
         """
         Create a new markup for the centerline and the associated contour points.
 
@@ -156,7 +170,6 @@ class GraphBranches:
         centerline_markup = slicer.mrmlScene.AddNewNodeByClass(
             "vtkMRMLMarkupsCurveNode"
         )
-        slicer.util.updateMarkupsControlPointsFromArray(centerline_markup, centerline)
 
         centerline_markup.SetName(name + "_centers")
         centerline_markup.GetDisplayNode().SetTextScale(self.centerline_text_size)
@@ -168,10 +181,7 @@ class GraphBranches:
         contour_points_markup = slicer.mrmlScene.AddNewNodeByClass(
             "vtkMRMLMarkupsFiducialNode"
         )
-        slicer.util.updateMarkupsControlPointsFromArray(
-            contour_points_markup,
-            np.array([elt for pts in contour_points for elt in pts]),
-        )
+
         contour_points_markup.GetDisplayNode().SetTextScale(0)
         contour_points_markup.GetDisplayNode().SetVisibility(False)
         contour_points_markup.GetDisplayNode().SetSelectedColor(*contour_points_color)
@@ -190,9 +200,7 @@ class GraphBranches:
     def create_new_branch(
         self,
         edge,
-        centerline: np.ndarray,
-        contour_points: list[list[np.ndarray]],
-        centerline_radius: list[float],
+        branch: list[Cylinder],
         parent_node: Union[str, None] = None,
         isFromSplitBranch: bool = False,
     ):
@@ -211,19 +219,14 @@ class GraphBranches:
         isFromSplitBranch: flag to check if this new branch is from a split, if it is not from a split we may
         merge branch with its single children.
         """
-        new_branch_list = []
-        for point in centerline:
-            new_branch_list.append(Cylinder(center=np.array(point)))
-        self.branch_list.append(new_branch_list)
+        self.branch_list.append(branch)
 
         self.edges.append(edge)
         new_name = "b" + str(len(self.edges))
         self.names.append(new_name)
-        self.centerlines.append(centerline)
-        self.contours_points.append(contour_points)
-        self.centerline_radius.append(centerline_radius)
 
-        self.create_new_markups(new_name, centerline, contour_points)
+        self.create_new_markup(new_name)
+        self.update_markup(len(self.branch_list) - 1)
 
         self.tree_widget.insertAfterNode(
             nodeId=new_name,
@@ -245,19 +248,7 @@ class GraphBranches:
         node_idx: index of the last point of the branch.
         """
         self.branch_list[branch_idx] = self.branch_list[branch_idx][node_idx:]
-        self.centerlines[branch_idx] = self.centerlines[branch_idx][node_idx:]
-        self.contours_points[branch_idx] = self.contours_points[branch_idx][node_idx:]
-        self.centerline_radius[branch_idx] = self.centerline_radius[branch_idx][
-            node_idx:
-        ]
-
-        slicer.util.updateMarkupsControlPointsFromArray(
-            self.centerline_markups[branch_idx], self.centerlines[branch_idx]
-        )
-        slicer.util.updateMarkupsControlPointsFromArray(
-            self.contour_points_markups[branch_idx],
-            np.array([elt for pts in self.contours_points[branch_idx] for elt in pts]),
-        )
+        self.update_markup(branch_idx)
 
     def truncate_branch_end(self, branch_idx: int, node_idx: int):
         """
@@ -270,19 +261,7 @@ class GraphBranches:
         node_idx: index of the last point of the branch.
         """
         self.branch_list[branch_idx] = self.branch_list[branch_idx][:node_idx]
-        self.centerlines[branch_idx] = self.centerlines[branch_idx][:node_idx]
-        self.contours_points[branch_idx] = self.contours_points[branch_idx][:node_idx]
-        self.centerline_radius[branch_idx] = self.centerline_radius[branch_idx][
-            :node_idx
-        ]
-
-        slicer.util.updateMarkupsControlPointsFromArray(
-            self.centerline_markups[branch_idx], self.centerlines[branch_idx]
-        )
-        slicer.util.updateMarkupsControlPointsFromArray(
-            self.contour_points_markups[branch_idx],
-            np.array([elt for pts in self.contours_points[branch_idx] for elt in pts]),
-        )
+        self.update_markup(branch_idx)
 
     def update_visibility_button(self, column: TreeColumnRole):
         """
@@ -332,35 +311,31 @@ class GraphBranches:
 
         """
         # Modify old branch which became a parent
-        centerline = self.centerlines[idx_branch]
-        contour_points = self.contours_points[idx_branch]
-        centerline_radius = self.centerline_radius[idx_branch]
+        branch = self.branch_list[idx_branch]
         self.truncate_branch_end(idx_branch, idx_cyl + 1)
 
         # Update edges
-        self.nodes.append(centerline[idx_cyl])
+        self.nodes.append(branch[idx_cyl].center)
         old_end = self.edges[idx_branch][1]
         self.edges[idx_branch] = (self.edges[idx_branch][0], len(self.nodes) - 1)
 
         # Create new branch from the old one but as a child
         self.create_new_branch(
             (len(self.nodes) - 1, old_end),
-            centerline[idx_cyl:],
-            contour_points[idx_cyl:],
-            centerline_radius[idx_cyl:],
+            branch[idx_cyl:],
             parent_node,
             True,
         )
 
-        return centerline[idx_cyl : idx_cyl + 1], centerline_radius[
-            idx_cyl : idx_cyl + 1
-        ], contour_points[idx_cyl : idx_cyl + 1]
+        return branch[idx_cyl]
 
     def save_networkX(
-        self, forced_path: Union[None, Path] = None, show_success_window: bool = True
-    ) -> Union[None, str]:
+        self,
+        forced_path: Union[None, Path, str] = None,
+        show_success_window: bool = True,
+    ) -> Union[None, Path]:
         """
-        Save the graph created as a networkx .JSON and .pickle file if the user select a valid directory.
+        Save the graph created as a networkx .JSON file if the user select a valid file.
 
         Parameters
         ----------
@@ -376,17 +351,26 @@ class GraphBranches:
         Union[None, str]
           None if the user did not enter a folder path, otherwise returns the name of the saved file.
         """
+
         if forced_path is not None:
-            folder_path = forced_path
+            file_save_path = forced_path
         else:
             dialog = qt.QFileDialog()
-            folder_path = dialog.getExistingDirectory(None, "Choose a folder")
+            file_save_path = dialog.getSaveFileName(
+                None,
+                "Save as",
+                Path.home().joinpath(
+                    f"graph_tree_{datetime.now().strftime('%Y-%m-%d_%H:%M:%S')}.json"
+                ),
+            )
 
         # cancel any action if the user cancel / close the window / press escape
-        if not folder_path:
+        if not file_save_path:
             return
 
-        folder_path = Path(folder_path)
+        file_save_path = Path(file_save_path)
+        if not file_save_path.name.endswith(".json"):
+            file_save_path = file_save_path.with_name(file_save_path.name + ".json")
 
         # Create graph Network X with node = bifurcation and edges = branches
         branch_graph = nx.DiGraph()
@@ -394,19 +378,29 @@ class GraphBranches:
         for i, n in enumerate(self.nodes):
             branch_graph.add_node(i, pos=n)
         for i, e in enumerate(self.edges):
+            centerline = []
+            radius = []
+            direction = []
+            height = []
+            contour_points = []
+
+            for cyl in self.branch_list[i]:
+                centerline.append(cyl.center)
+                radius.append(cyl.radius)
+                direction.append(cyl.direction)
+                height.append(cyl.height)
+                contour_points.append(cyl.contour_points)
+
             branch_graph.add_edge(
                 e[0],
                 e[1],
                 name=self.names[i],
-                centerline=self.centerlines[i],
-                contour_points=self.contours_points[i],
+                centerline=centerline,
+                radius=radius,
+                direction=direction,
+                height=height,
+                contour_points=contour_points,
             )
-
-        filename = f"graph_tree_{datetime.now().strftime('%Y-%m-%d_%H:%M:%S')}"
-
-        # save with pickle
-        with open(folder_path.joinpath(f"{filename}.pickle"), "wb") as f:
-            pickle.dump(branch_graph, f, pickle.HIGHEST_PROTOCOL)
 
         def ndarray_to_list(data):
             if isinstance(data, np.ndarray):
@@ -421,15 +415,15 @@ class GraphBranches:
         # save to JSON
         data = json_graph.node_link_data(branch_graph)
         data_list = ndarray_to_list(data)
-        with open(folder_path.joinpath(f"{filename}.json"), "w") as outfile:
+        with open(file_save_path, "w") as outfile:
             json.dump(data_list, outfile, indent=4)
 
         if show_success_window:
             slicer.util.infoDisplay(
-                f"The graph has been successfully exported to :\n{folder_path}",
+                f"The graph has been successfully exported to :\n{file_save_path.parent}",
                 windowTitle="Success",
             )
-        return filename
+        return file_save_path
 
     def load_branches_from_graph(self, graph: nx.DiGraph):
         """
@@ -448,22 +442,19 @@ class GraphBranches:
             (
                 self.branch_list,
                 self.names,
-                self.centerlines,
-                self.contours_points,
-                self.centerline_radius,
                 self.edges,
                 self.nodes,
-                markup_list_to_create,
                 edge_name_table,
             ) = restore_lists_from_graph(graph)
 
-            for args in CustomProgressBar(
-                iterable=markup_list_to_create,
+            for idx, name in CustomProgressBar(
+                iterable=list(enumerate(self.names)),
                 quantity_to_measure="branch added",
                 windowTitle="Restoring tree architecture...",
                 width=300,
             ):
-                self.create_new_markups(*args)
+                self.create_new_markup(name=name)
+                self.update_markup(idx)
 
             for a, b in nx.edge_dfs(graph):
                 current_edge_name = graph[a][b]["name"]
@@ -502,9 +493,6 @@ class GraphBranches:
         self.nodes = []
         self.edges = []
         self.names = []
-        self.centerlines = []
-        self.contours_points = []
-        self.centerline_radius = []
 
         for _ in CustomProgressBar(
             iterable=range(len(self.centerline_markups)),
@@ -682,7 +670,7 @@ class GraphBranches:
 
         self.truncate_branch_begin(branch_id, branch_node_id)
         edges_node_id = self.edges[branch_id][0]
-        self.nodes[edges_node_id] = self.centerlines[branch_id][0]
+        self.nodes[edges_node_id] = self.branch_list[branch_id][0].center
 
     def on_remove_end(self, treeItem):
         """
@@ -714,11 +702,11 @@ class GraphBranches:
             return
 
         # Nothing to delete
-        if branch_node_id == len(self.centerlines[branch_id]) - 1:
+        if branch_node_id == len(self.branch_list[branch_id]) - 1:
             return
 
         edges_node_id = self.edges[branch_id][1]
-        self.nodes[edges_node_id] = self.centerlines[branch_id][branch_node_id]
+        self.nodes[edges_node_id] = self.branch_list[branch_id][branch_node_id].center
         self.truncate_branch_end(branch_id, branch_node_id + 1)
 
     def delete_node(self, index: int):
@@ -784,9 +772,7 @@ class GraphBranches:
 
         self.names.pop(branch_id)
         self.branch_list.pop(branch_id)
-        self.centerlines.pop(branch_id)
-        self.contours_points.pop(branch_id)
-        self.centerline_radius.pop(branch_id)
+
         slicer.mrmlScene.RemoveNode(self.centerline_markups.pop(branch_id))
         slicer.mrmlScene.RemoveNode(self.contour_points_markups.pop(branch_id))
 
@@ -802,7 +788,7 @@ class GraphBranches:
 
     def on_merge_only_child(self, branch_id: str):
         """
-        Merge branch if it contains a single child.
+        Merge branch with its child if it contains a single child.
 
         Parameters
         ----------
@@ -818,26 +804,13 @@ class GraphBranches:
         parent_idx = self.names.index(branch_id)
         child_idx = self.names.index(child_list[0])
 
-        # Modify parent branch to add child branch
-        self.centerlines[parent_idx] = np.vstack(
-            (self.centerlines[parent_idx], self.centerlines[child_idx][1:])
-        )
-        self.centerlines.pop(child_idx)
-        self.contours_points[parent_idx] += self.contours_points[child_idx][1:]
-        self.contours_points.pop(child_idx)
-        self.centerline_radius[parent_idx] += self.centerline_radius[child_idx][1:]
-        self.centerline_radius.pop(child_idx)
-        slicer.util.updateMarkupsControlPointsFromArray(
-            self.centerline_markups[parent_idx], self.centerlines[parent_idx]
-        )
-        slicer.util.updateMarkupsControlPointsFromArray(
-            self.contour_points_markups[parent_idx],
-            np.array([elt for pts in self.contours_points[parent_idx] for elt in pts]),
-        )
+        # Modify parent branch to add child branch cylinders (we discard the first points because it is a common point)
+        self.branch_list[parent_idx] += self.branch_list[child_idx][1:]
+        self.branch_list.pop(child_idx)
+
+        self.update_markup(parent_idx)
         slicer.mrmlScene.RemoveNode(self.centerline_markups.pop(child_idx))
         slicer.mrmlScene.RemoveNode(self.contour_points_markups.pop(child_idx))
-        self.branch_list[parent_idx] += self.branch_list[child_idx]
-        self.branch_list.pop(child_idx)
 
         # Delete old child
         self.delete_node(self.edges[child_idx][0])
@@ -849,9 +822,7 @@ class GraphBranches:
 
     def extend_root_from_begin(
         self,
-        centerline: np.ndarray,
-        contour_points: list[list[np.ndarray]],
-        centerline_radius: list[float],
+        branch: list[Cylinder],
         root_idx: int,
     ):
         """
@@ -867,31 +838,17 @@ class GraphBranches:
         root_idx: index of the root branch.
         """
 
-        centerline = centerline[::-1]
-        contour_points = contour_points[::-1]
-        centerline_radius = centerline_radius[::-1]
+        branch = branch[::-1]
 
         # Update the position of the new beginning of the root node
         begin_node_idx = self.edges[root_idx][0]
-        self.nodes[begin_node_idx] = centerline[0]
+        self.nodes[begin_node_idx] = branch[0].center
 
         # Remove the last point since they have it in common
-        centerline = centerline[:-1]
-        contour_points = contour_points[:-1]
-        centerline_radius = centerline_radius[:-1]
+        branch = branch[:-1]
 
         # Concatenate
-        self.centerlines[root_idx] = np.vstack((centerline, self.centerlines[root_idx]))
-        self.contours_points[root_idx] = contour_points + self.contours_points[root_idx]
-        self.centerline_radius[root_idx] = (
-            centerline_radius + self.centerline_radius[root_idx]
-        )
+        self.branch_list[root_idx] = branch + self.branch_list[root_idx]
 
         # Update markups
-        slicer.util.updateMarkupsControlPointsFromArray(
-            self.centerline_markups[root_idx], self.centerlines[root_idx]
-        )
-        slicer.util.updateMarkupsControlPointsFromArray(
-            self.contour_points_markups[root_idx],
-            np.array([elt for pts in self.contours_points[root_idx] for elt in pts]),
-        )
+        self.update_markup(root_idx)

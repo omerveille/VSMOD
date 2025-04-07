@@ -7,7 +7,7 @@ import slicer
 from networkx.readwrite import json_graph
 from numpy.testing import assert_array_almost_equal
 from ransac_slicer.graph_branches import restore_lists_from_graph
-from ransac_slicer.region_growing_seeds import _compute_draw_order, paint_segments
+from ransac_slicer.region_growing_seeds import paint_segments
 from .test_utils import get_resources_path
 
 
@@ -36,25 +36,20 @@ class RegionGrowingSeedsTest(unittest.TestCase):
         cls.segmentation_node = segmentation_node
 
         (
-            _,
+            cls.branch_list,
             cls.names,
-            cls.centerlines,
-            _,
-            cls.centerline_radius,
-            edges,
-            nodes,
-            _,
-            _,
+            cls.edges,
+            cls.nodes,
+            cls.edge_name_table,
         ) = restore_lists_from_graph(graph)
-        cls.draw_order = _compute_draw_order(nodes, edges)
 
     def test_01_paint_segments_end_to_end(self):
         labelmap_array = paint_segments(
             volume_node=self.volume_node,
-            centerlines=self.centerlines,
+            branches=self.branch_list,
             centerline_names=self.names,
-            radius=self.centerline_radius,
-            branch_draw_order=self.draw_order,
+            nodes=self.nodes,
+            edges=self.edges,
             segmentation_node=self.segmentation_node,
             reduction_factor=0.75,
             radius_reduction_threshold=5.0,
@@ -62,15 +57,17 @@ class RegionGrowingSeedsTest(unittest.TestCase):
             merge_all_vessels=False,
         )
 
-        assert_array_almost_equal(np.arange(stop=15), np.unique(labelmap_array))
+        assert_array_almost_equal(
+            np.arange(stop=len(self.branch_list) + 2), np.unique(labelmap_array)
+        )
         del labelmap_array
 
         labelmap_array = paint_segments(
             volume_node=self.volume_node,
-            centerlines=self.centerlines,
+            branches=self.branch_list,
             centerline_names=self.names,
-            radius=self.centerline_radius,
-            branch_draw_order=self.draw_order,
+            nodes=self.nodes,
+            edges=self.edges,
             segmentation_node=self.segmentation_node,
             reduction_factor=0.75,
             radius_reduction_threshold=5.0,

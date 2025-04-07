@@ -1,9 +1,11 @@
 import io
 import sys
 from contextlib import contextmanager
+from typing import Union
+from numpy.testing import assert_almost_equal
+from math import isclose
 from pathlib import Path
 import slicer
-import pickle
 
 import numpy as np
 
@@ -53,8 +55,21 @@ def get_resources_path() -> Path:
 def load_object_from_path(path: Path) -> object:
     if path.name.endswith(".npy"):
         return np.load(path)
-    if path.name.endswith(".pickle"):
-        with open(path, "rb") as f:
-            return pickle.load(f)
     else:
         return slicer.util.loadVolume(str(path))
+
+
+def custom_iterable_assertion(list_1: Union[list, tuple], list_2: Union[list, tuple]):
+    if list_1 is list_2:
+        return
+    assert len(list_1) == len(list_2)
+    for item_1, item_2 in zip(list_1, list_2):
+        assert type(item_1) is type(item_2)
+        if type(item_1) in [list, tuple]:
+            custom_iterable_assertion(item_1, item_2)
+        elif isinstance(item_1, np.ndarray):
+            assert_almost_equal(item_1, item_2)
+        elif type(item_1) in [float, int, np.float64]:
+            assert isclose(item_1, item_2)
+        else:
+            assert item_1 == item_2

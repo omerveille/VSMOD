@@ -499,10 +499,10 @@
        <item>
         <widget class="QPushButton" name="exportTreeButton">
          <property name="toolTip">
-          <string>Export the Network X graph of the centerlines and contour points as JSON and pickle files.</string>
+          <string>Export the Network X graph of the centerlines and contour points as json file.</string>
          </property>
          <property name="text">
-          <string>Export Tree as graph</string>
+          <string>Export Tree as graph (json)</string>
          </property>
         </widget>
        </item>

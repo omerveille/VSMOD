@@ -18,6 +18,7 @@ class Cylinder:
         radius: float = 1,
         direction: np.ndarray = np.array([0, 0, 1], dtype=np.float64),
         height: float = -1,
+        contour_points: np.ndarray = np.empty(shape=(0, 3), dtype=np.float64),
     ):
         """
         Generate a new instance of cylinder.
@@ -36,10 +37,11 @@ class Cylinder:
             height (int, optional): Cylinder's height. Defaults to -1.
         """
 
-        self.center: np.ndarray = np.asarray(center[0:3], dtype=np.float64)
+        self.center: np.ndarray = center
         self.radius: float = radius
         self.direction: np.ndarray = direction
         self.height: float = height
+        self.contour_points: np.ndarray = contour_points
 
     def __eq__(self, other_cyl: object) -> bool:
         if type(self) is not type(other_cyl):
@@ -50,10 +52,11 @@ class Cylinder:
             and isclose(self.radius, other_cyl.radius)
             and np.allclose(self.direction, other_cyl.direction)
             and isclose(self.height, other_cyl.height)
+            and np.allclose(self.contour_points, other_cyl.contour_points)
         )
 
     def __str__(self) -> str:
-        return f"Cylinder= center:{self.center.tolist()}|radius: {self.radius}|direction:{self.direction.tolist()}| height:{self.height}"
+        return f"Cylinder= center:{self.center.tolist()}|radius: {self.radius}|direction:{self.direction.tolist()}| height:{self.height}| contour_points:{self.contour_points}"
 
     def copy(self):
         """
@@ -63,7 +66,9 @@ class Cylinder:
             cylinder: Copy of current cylinder
         """
 
-        return Cylinder(self.center, self.radius, self.direction, self.height)
+        return Cylinder(
+            self.center, self.radius, self.direction, self.height, self.contour_points
+        )
 
     @property
     def center(self):
@@ -85,7 +90,7 @@ class Cylinder:
             c (np.array(dtype=np.float64)): New cylinder's center
         """
 
-        self._center = np.asarray(c)
+        self._center = np.asarray(c, dtype=np.float64)
 
     @property
     def radius(self):
@@ -138,11 +143,12 @@ class Cylinder:
             ValueError: norm(d) == 0
         """
 
+        d = np.asarray(d, dtype=np.float64)
         n = np.linalg.norm(d)
 
         if math.isclose(n, 0):
             raise ValueError(
-                "The length of the direction vector of the cylinder is too close to 0.\nYou should space the starting and direction point a bit more."
+                "The length of the direction vector of the cylinder is too close to 0.\nYou should put a bit more space between the starting and the direction point."
             )
         else:
             self._direction = d / n
@@ -172,6 +178,36 @@ class Cylinder:
             self._height = -1
         else:
             self._height = h
+
+    @property
+    def contour_points(self):
+        """
+        Getter of cylinder's contour_points
+
+        Returns:
+            np.ndarray: Cylinder's contour points
+        """
+        return self._contour_points
+
+    @contour_points.setter
+    def contour_points(self, contour_points):
+        """
+        Setter of cylinder's contour_points
+
+        Args:
+            contour_points (np.array(dtype=np.float64)): New cylinder's contour_points
+
+        Raises:
+            ValueError: shape != (X, 3)
+        """
+
+        contour_points = np.asarray(contour_points)
+        if len(contour_points.shape) != 2 or contour_points.shape[1] != 3:
+            raise ValueError(
+                f"Wrong dimension for the contour points of the cylinder.\nExpected (X, 3) got {contour_points.shape}."
+            )
+
+        self._contour_points = contour_points
 
     def signed_distance(self, p):
         """

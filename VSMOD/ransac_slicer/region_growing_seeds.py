@@ -1,5 +1,6 @@
 from typing import Union
 from .popup_utils import CustomProgressBar, CustomStatusDialog
+from .cylinder import Cylinder
 import slicer
 import numpy as np
 import vtk
@@ -147,10 +148,10 @@ def update_segment(
 
 def paint_segments(
     volume_node: slicer.vtkMRMLScalarVolumeNode,
-    centerlines: list[np.ndarray],
+    branches: list[list[Cylinder]],
     centerline_names: list[str],
-    radius: list[list[float]],
-    branch_draw_order: list[int],
+    nodes: list[np.ndarray],
+    edges: list[tuple[int, int]],
     segmentation_node: slicer.vtkMRMLSegmentationNode,
     reduction_factor: float,
     radius_reduction_threshold: float,
@@ -179,6 +180,31 @@ def paint_segments(
 
     The segmentation mapping of the volume.
     """
+
+    # Extract the centerline information from the branches
+    centerlines = []
+    radius = []
+    for branch in CustomProgressBar(
+        iterable=branches,
+        quantity_to_measure="branches processed",
+        windowTitle="Applying preprocessing to branches ...",
+        width=300,
+    ):
+        centerline = []
+        centerline_radius = []
+        for cyl in branch:
+            centerline.append(cyl.center)
+            # We underestimate the radius of the cylinder in order to not make the seed leak out of the vessels
+            underestimated_radius = np.linalg.norm(
+                np.array(cyl._contour_points) - cyl.center,
+                axis=1,
+            ).min()
+            centerline_radius.append(underestimated_radius)
+        centerlines.append(np.array(centerline, dtype=np.float64))
+        radius.append(centerline_radius)
+
+    # Compute the draw order
+    branch_draw_order = _compute_draw_order(nodes, edges)
 
     # Important variables
     voxel_spacing = np.array(volume_node.GetSpacing()[::-1])
@@ -398,6 +424,7 @@ def paint_segments(
 
     # Outter edge
     progress_dialog.set_text("Computing the outter edge ...")
+    # It's technicly incorrect to use a ball, as voxels are not the same size, but well if it works fine ...
     contours_dilated = binary_dilation(contours_map, ball(radius=contour_distance + 2))
 
     # Inner edge

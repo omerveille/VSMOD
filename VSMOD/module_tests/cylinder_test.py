@@ -13,17 +13,21 @@ class CylinderTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             Cylinder(direction=np.zeros(shape=(3,), dtype=np.float64))
 
-        Cylinder()
+        cyl = Cylinder()
+        assert_array_almost_equal(cyl.center, np.zeros(shape=(3), dtype=np.float64))
+        self.assertAlmostEqual(cyl.radius, 1)
+        assert_array_almost_equal(cyl.direction, np.array([0, 0, 1], dtype=np.float64))
+        self.assertAlmostEqual(cyl.height, -1)
+        assert_array_almost_equal(
+            cyl.contour_points, np.empty(shape=(0, 3), dtype=np.float64)
+        )
 
     def test_02_Cylinder_copy(self):
         cyl_a = Cylinder()
         cyl_b = cyl_a.copy()
 
         self.assertIsNot(cyl_a, cyl_b)
-        assert_array_almost_equal(cyl_a.center, cyl_b.center)
-        self.assertEqual(cyl_a.radius, cyl_b.radius)
-        assert_array_almost_equal(cyl_a.direction, cyl_b.direction)
-        self.assertEqual(cyl_a.height, cyl_b.height)
+        self.assertEqual(cyl_a, cyl_b)
 
     def test_03_Cylinder_distances(self):
         # Test with points on the surface of the cylinder

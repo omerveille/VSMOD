@@ -1,10 +1,10 @@
 import json
 from pathlib import Path
+from datetime import datetime
 import unittest
-from .test_utils import get_resources_path
+from .test_utils import get_resources_path, custom_iterable_assertion
 
 import networkx as nx
-from math import isclose
 from networkx.readwrite import json_graph
 import numpy as np
 from numpy.testing import assert_almost_equal
@@ -45,27 +45,24 @@ class Graph_branchesTest(unittest.TestCase):
         self.assertEqual(self.graph_branches.nodes, [])
         self.assertEqual(self.graph_branches.edges, [])
         self.assertEqual(self.graph_branches.names, [])
-        self.assertEqual(self.graph_branches.centerlines, [])
-        self.assertEqual(self.graph_branches.contours_points, [])
-        self.assertEqual(self.graph_branches.centerline_radius, [])
         self.assertEqual(self.graph_branches.centerline_markups, [])
         self.assertEqual(self.graph_branches.contour_points_markups, [])
         self.assertAlmostEqual(self.graph_branches.centerline_text_size, 3.0)
         self.assertIs(self.graph_branches.tree_widget, self.tree_widget)
 
     def test_02_GraphBranches_create_new_markups(self):
-        centerline = np.zeros(shape=(2, 3))
-        contour_points = [
-            [[0] * 3 for _ in range(3)] for _ in range(centerline.shape[0])
-        ]
-        init_center = len(self.graph_branches.centerline_markups)
-        init_contour = len(self.graph_branches.contour_points_markups)
-        self.graph_branches.create_new_markups("b1", centerline, contour_points)
-
-        self.assertEqual(len(self.graph_branches.centerline_markups), init_center + 1)
-        self.assertEqual(
-            len(self.graph_branches.contour_points_markups), init_contour + 1
+        nb_cyls = 10
+        self.graph_branches.branch_list.append(
+            [
+                Cylinder(radius=i, contour_points=np.random.random(3 * i).reshape(i, 3))
+                for i in range(1, 1 + nb_cyls)
+            ]
         )
+        self.graph_branches.create_new_markup("b1")
+        self.graph_branches.update_markup(0)
+
+        self.assertEqual(len(self.graph_branches.centerline_markups), 1)
+        self.assertEqual(len(self.graph_branches.contour_points_markups), 1)
         center_markup = self.graph_branches.centerline_markups[-1]
         contour_markup = self.graph_branches.contour_points_markups[-1]
 
@@ -85,42 +82,59 @@ class Graph_branchesTest(unittest.TestCase):
             tuple(contour_points_color),
         )
 
+        self.assertEqual(center_markup.GetNumberOfControlPoints(), nb_cyls)
+        nb_contours_points = sum([(i + 1) for i in range(nb_cyls)])
+        self.assertEqual(contour_markup.GetNumberOfControlPoints(), nb_contours_points)
+
     def test_03_GraphBranches_create_new_branch(self):
+        nb_cyls = 10
         edge = (0, 1)
-        centerline = np.zeros(shape=(2, 3))
-        contour_points = [
-            [[0] * 3 for _ in range(3)] for _ in range(centerline.shape[0])
+        branch = [
+            Cylinder(radius=i, contour_points=np.random.random(3 * i).reshape(i, 3))
+            for i in range(1, nb_cyls + 1)
         ]
-        centerline_radius = [0.5, 0.6]
         parent_node = None
         isFromSplitBranch = False
-        init_branches = len(self.graph_branches.branch_list)
-        init_names = len(self.graph_branches.names)
         self.graph_branches.create_new_branch(
             edge,
-            centerline,
-            contour_points,
-            centerline_radius,
+            branch,
             parent_node,
             isFromSplitBranch,
         )
 
-        self.assertEqual(len(self.graph_branches.branch_list), init_branches + 1)
-        self.assertEqual(len(self.graph_branches.names), init_names + 1)
-        np.testing.assert_array_equal(self.graph_branches.centerlines[-1], centerline)
-        self.assertEqual(self.graph_branches.contours_points[-1], contour_points)
-        self.assertEqual(self.graph_branches.centerline_radius[-1], centerline_radius)
+        center_markup = self.graph_branches.centerline_markups[-1]
+        contour_markup = self.graph_branches.contour_points_markups[-1]
+
+        self.assertEqual(center_markup.GetName(), "b1_centers")
+        self.assertEqual(contour_markup.GetName(), "b1_contours")
+
+        self.assertAlmostEqual(
+            center_markup.GetDisplayNode().GetTextScale(),
+            self.graph_branches.centerline_text_size,
+        )
+        self.assertTupleEqual(
+            tuple(center_markup.GetDisplayNode().GetSelectedColor()),
+            tuple(centerline_color),
+        )
+        self.assertTupleEqual(
+            tuple(contour_markup.GetDisplayNode().GetSelectedColor()),
+            tuple(contour_points_color),
+        )
+
+        self.assertEqual(center_markup.GetNumberOfControlPoints(), nb_cyls)
+        nb_contours_points = sum([(i + 1) for i in range(nb_cyls)])
+        self.assertEqual(contour_markup.GetNumberOfControlPoints(), nb_contours_points)
+
         new_name = self.graph_branches.names[-1]
+        custom_iterable_assertion(self.graph_branches.branch_list[-1], branch)
         self.assertIsNotNone(self.tree_widget.getTreeWidgetItem(new_name))
 
     def test_04_GraphBranches_truncate_branch(self):
         number_of_points = 10
-        self.graph_branches.branch_list = [[Cylinder()] * number_of_points]
-        self.graph_branches.centerlines = [np.zeros(shape=(number_of_points, 3))]
-        self.graph_branches.contours_points = [
-            [[[0] * 3 for _ in range(3)] for _ in range(number_of_points)]
+        self.graph_branches.branch_list = [
+            [Cylinder(contour_points=np.zeros(shape=(1, 3), dtype=np.float64))]
+            * number_of_points
         ]
-        self.graph_branches.centerline_radius = [[0.5] * number_of_points]
         self.graph_branches.centerline_markups = [
             slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsCurveNode")
         ]
@@ -130,22 +144,17 @@ class Graph_branchesTest(unittest.TestCase):
         self.graph_branches.truncate_branch_end(0, 2)
 
         self.assertEqual(len(self.graph_branches.branch_list[0]), 2)
-        self.assertEqual(self.graph_branches.centerlines[0].shape[0], 2)
-        self.assertEqual(len(self.graph_branches.contours_points[0]), 2)
-        self.assertEqual(len(self.graph_branches.centerline_radius[0]), 2)
         self.assertEqual(
             self.graph_branches.centerline_markups[0].GetNumberOfControlPoints(), 2
         )
         self.assertEqual(
-            self.graph_branches.contour_points_markups[0].GetNumberOfControlPoints(), 6
+            self.graph_branches.contour_points_markups[0].GetNumberOfControlPoints(), 2
         )
 
-        self.graph_branches.branch_list = [[Cylinder()] * number_of_points]
-        self.graph_branches.centerlines = [np.zeros(shape=(number_of_points, 3))]
-        self.graph_branches.contours_points = [
-            [[[0] * 3 for _ in range(3)] for _ in range(number_of_points)]
+        self.graph_branches.branch_list = [
+            [Cylinder(contour_points=np.zeros(shape=(1, 3), dtype=np.float64))]
+            * number_of_points
         ]
-        self.graph_branches.centerline_radius = [[0.5] * number_of_points]
         self.graph_branches.centerline_markups = [
             slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsCurveNode")
         ]
@@ -155,14 +164,11 @@ class Graph_branchesTest(unittest.TestCase):
         self.graph_branches.truncate_branch_begin(0, 8)
 
         self.assertEqual(len(self.graph_branches.branch_list[0]), 2)
-        self.assertEqual(self.graph_branches.centerlines[0].shape[0], 2)
-        self.assertEqual(len(self.graph_branches.contours_points[0]), 2)
-        self.assertEqual(len(self.graph_branches.centerline_radius[0]), 2)
         self.assertEqual(
             self.graph_branches.centerline_markups[0].GetNumberOfControlPoints(), 2
         )
         self.assertEqual(
-            self.graph_branches.contour_points_markups[0].GetNumberOfControlPoints(), 6
+            self.graph_branches.contour_points_markups[0].GetNumberOfControlPoints(), 2
         )
 
     def test_05_GraphBranches_update_visibility_button(self):
@@ -187,74 +193,50 @@ class Graph_branchesTest(unittest.TestCase):
             self.assertIn(expected_text, self.centerline_button.text)
 
     def test_06_GraphBranches_split_branch(self):
-        self.graph_branches.branch_list = [[Cylinder(), Cylinder()]]
-        self.graph_branches.centerlines = [np.zeros(shape=(2, 3))]
-        self.graph_branches.contours_points = [
-            [[[0] * 3 for _ in range(3)] for _ in range(2)]
+        nb_cyls = 10
+        edge = (0, 1)
+        branch = [
+            Cylinder(radius=i, contour_points=np.random.random(3 * i).reshape(i, 3))
+            for i in range(1, nb_cyls + 1)
         ]
-        self.graph_branches.centerline_radius = [[0.5, 0.6, 0.7]]
-        self.graph_branches.centerline_markups = [
-            slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsCurveNode")
-        ]
-        self.graph_branches.contour_points_markups = [
-            slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsFiducialNode")
-        ]
-        self.graph_branches.edges = [(0, 1)]
-        self.graph_branches.names = ["b1"]
-        self.graph_branches.nodes = []
-        self.tree_widget.clear()
-        result = self.graph_branches.split_branch(0, 1, None)
+        parent_node = None
+        isFromSplitBranch = False
 
-        self.assertEqual(self.graph_branches.centerlines[0].shape[0], 2)
-        self.assertGreater(len(self.graph_branches.names), 1)
+        expected_cyl = branch[1]
+        self.graph_branches.create_new_branch(
+            edge,
+            branch,
+            parent_node,
+            isFromSplitBranch,
+        )
+        cyl = self.graph_branches.split_branch(0, 1, None)
+
+        self.assertEqual(len(self.graph_branches.branch_list), 2)
+        self.assertEqual(len(self.graph_branches.names), 2)
         new_branch_name = self.graph_branches.names[-1]
         self.assertIsNotNone(self.tree_widget.getTreeWidgetItem(new_branch_name))
-        center_part, radius_part, contour_part = result
-        self.assertEqual(center_part.shape[0], 1)
-        self.assertEqual(len(radius_part), 1)
-        self.assertEqual(len(contour_part), 1)
+        self.assertEqual(cyl, expected_cyl)
 
     def test_07_GraphBranches_save_networkX(self):
-        G = nx.DiGraph()
-        G.add_node(0, pos=[0, 0, 0])
-        G.add_node(1, pos=[1, 1, 1])
-        G.add_edge(
-            0,
-            1,
-            name="b1",
-            centerline=[[0, 0, 0], [1, 1, 1]],
-            contour_points=[[[0, 0, 0], [0, 1, 0]], [[1, 0, 1], [1, 1, 1]]],
+        tempfile_path = Path(slicer.app.temporaryPath).joinpath(
+            f"graph_tree_{datetime.now().strftime('%Y-%m-%d_%H:%M:%S')}"
         )
-        tempfile_path = Path(slicer.app.temporaryPath)
-        filename = self.graph_branches.save_networkX(
+        save_path = self.graph_branches.save_networkX(
             forced_path=tempfile_path, show_success_window=False
         )
 
-        self.assertIsNotNone(filename)
+        self.assertIsNotNone(save_path)
+        self.addCleanup(self.remove_files, save_path)
+        self.assertTrue(save_path.exists())
 
-        files = [
-            file
-            for file in tempfile_path.iterdir()
-            if file.is_file()
-            and file.name.startswith(filename)
-            and (file.name.endswith(".json") or file.name.endswith(".pickle"))
-        ]
-        self.addCleanup(self.remove_files, files)
-
-        self.assertEqual(len(files), 2)
-
-    def remove_files(self, files: list[Path]):
-        for file in files:
-            file.unlink(missing_ok=True)
+    def remove_files(self, file: Path):
+        file.unlink(missing_ok=True)
 
     def test_08_GraphBranches_clear_all(self):
         self.graph_branches.branch_list = [[Cylinder()]]
         self.graph_branches.nodes = [[0] * 3]
         self.graph_branches.edges = [(0, 1)]
         self.graph_branches.names = ["b1"]
-        self.graph_branches.centerlines = [np.zeros(3)]
-        self.graph_branches.contours_points = [[[0] * 3]]
-        self.graph_branches.centerline_radius = [[0.5]]
         self.graph_branches.centerline_markups = [
             slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsCurveNode")
         ]
@@ -269,9 +251,6 @@ class Graph_branchesTest(unittest.TestCase):
         self.assertEqual(self.graph_branches.nodes, [])
         self.assertEqual(self.graph_branches.edges, [])
         self.assertEqual(self.graph_branches.names, [])
-        self.assertEqual(self.graph_branches.centerlines, [])
-        self.assertEqual(self.graph_branches.contours_points, [])
-        self.assertEqual(self.graph_branches.centerline_radius, [])
         self.assertEqual(self.tree_widget._branchDict, {})
 
     def test_09_GraphBranches_on_stop_interaction(self):
@@ -373,20 +352,42 @@ class Graph_branchesTest(unittest.TestCase):
         self.assertEqual(self.graph_branches.node_selected, (0, 0))
         self.assertIs(self.tree_widget.currentItem(), tree_item)
 
-    def test_15_GraphBranches_on_remove_end(self):
-        self.graph_branches.names = ["b1"]
-        self.graph_branches.centerlines = [np.zeros(shape=(2, 3))]
-        self.graph_branches.contours_points = [
-            [[[0] * 3 for _ in range(3)] for _ in range(2)]
+    def test_15_GraphBranches_on_remove(self):
+        nb_cyls = 10
+        branch = [
+            Cylinder(
+                center=[i] * 3,
+                radius=i,
+                contour_points=np.random.random(3 * i).reshape(i, 3),
+            )
+            for i in range(1, 1 + nb_cyls)
         ]
-        self.graph_branches.centerline_radius = [[0.5, 0.6, 0.7]]
+
+        self.graph_branches.branch_list.append(branch)
+        self.graph_branches.names = ["b1"]
+        self.graph_branches.edges = [(0, 1)]
+        self.graph_branches.nodes = [branch[0].center, branch[-1].center]
         self.tree_widget.insertAfterNode("b1", None)
         tree_item = self.tree_widget.getTreeWidgetItem("b1")
         self.graph_branches.current_tree_item = tree_item
-        self.graph_branches.node_selected = (0, 1)
+        self.graph_branches.node_selected = (0, 3)
+        self.graph_branches.centerline_markups = [
+            slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsCurveNode")
+        ]
+        self.graph_branches.contour_points_markups = [
+            slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsFiducialNode")
+        ]
+
         self.graph_branches.on_remove_end(tree_item)
 
-        self.assertEqual(self.graph_branches.centerlines[0].shape[0], 2)
+        custom_iterable_assertion(branch[:4], self.graph_branches.branch_list[0])
+
+        self.graph_branches.node_selected = (0, 1)
+        self.graph_branches.on_remove_begin(tree_item)
+
+        custom_iterable_assertion(branch[1:4], self.graph_branches.branch_list[0])
+        assert_almost_equal(self.graph_branches.nodes[0], branch[1].center)
+        assert_almost_equal(self.graph_branches.nodes[1], branch[3].center)
 
     def test_16_GraphBranches_delete_node(self):
         self.graph_branches.nodes = [[0] * 3, [1] * 3, [2] * 3]
@@ -433,17 +434,17 @@ class Graph_branchesTest(unittest.TestCase):
     def test_18_GraphBranches_on_merge_only_child(self):
         self.graph_branches.names = ["b1", "b2"]
         self.graph_branches.nodes = [[0] * 3, [1] * 3, [2] * 3]
-        self.graph_branches.branch_list = [[[Cylinder(), Cylinder()]] for _ in range(2)]
+        self.graph_branches.branch_list = [
+            [
+                Cylinder(radius=0.5, contour_points=np.zeros(shape=(1, 3))),
+                Cylinder(radius=0.6, contour_points=np.zeros(shape=(1, 3))),
+            ],
+            [
+                Cylinder(radius=0.7, contour_points=np.zeros(shape=(1, 3))),
+                Cylinder(radius=0.8, contour_points=np.zeros(shape=(1, 3))),
+            ],
+        ]
         self.graph_branches.edges = [(0, 1), (1, 2)]
-        self.graph_branches.centerlines = [
-            np.zeros(shape=(2, 3)),
-            np.zeros(shape=(2, 3)),
-        ]
-        self.graph_branches.contours_points = [
-            [[[0] * 3 for _ in range(3)] for _ in range(2)],
-            [[[0] * 3 for _ in range(3)] for _ in range(2)],
-        ]
-        self.graph_branches.centerline_radius = [[0.5, 0.6], [0.7, 0.8]]
         self.graph_branches.centerline_markups = [
             slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsCurveNode")
             for _ in range(2)
@@ -452,17 +453,26 @@ class Graph_branchesTest(unittest.TestCase):
             slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsFiducialNode")
             for _ in range(2)
         ]
+
         self.tree_widget.insertAfterNode("b1", None)
         self.tree_widget.insertAfterNode("b2", "b1")
         self.graph_branches.on_merge_only_child("b1")
 
-        self.assertEqual(len(self.graph_branches.names), 1)
-        self.assertGreater(self.graph_branches.centerlines[0].shape[0], 2)
+        expected_branch = [
+            [
+                Cylinder(radius=0.5, contour_points=np.zeros(shape=(1, 3))),
+                Cylinder(radius=0.6, contour_points=np.zeros(shape=(1, 3))),
+                Cylinder(radius=0.8, contour_points=np.zeros(shape=(1, 3))),
+            ]
+        ]
+        custom_iterable_assertion(expected_branch, self.graph_branches.branch_list)
 
     def test_19_GraphBranches_extend_root_from_begin(self):
-        self.graph_branches.centerlines = [np.zeros(shape=(10, 3), dtype=np.float64)]
-        self.graph_branches.contours_points = [[[[0.0] * 3] for _ in range(10)]]
-        self.graph_branches.centerline_radius = [[0.0] * 10]
+        input_branch = [
+            Cylinder(contour_points=np.zeros(shape=(1, 3), dtype=np.float64))
+            for _ in range(10)
+        ]
+        self.graph_branches.branch_list.append(input_branch)
         self.graph_branches.edges = [(0, 1)]
         self.graph_branches.nodes = [
             np.zeros(shape=(3,), dtype=np.float64),
@@ -475,60 +485,22 @@ class Graph_branchesTest(unittest.TestCase):
             slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsFiducialNode")
         ]
 
-        centerline = np.vstack(
-            (
-                np.zeros(shape=(3,), dtype=np.float64),
-                np.ones_like(self.graph_branches.centerlines[0]),
-            )
-        )
-        contour_points = [[[0.0] * 3]] + [[[1.0] * 3] for _ in range(10)]
-        centerline_radius = [0.0] + [1.0] * 10
+        branch = [
+            Cylinder(contour_points=np.zeros(shape=(i, 3), dtype=np.float64))
+            for i in range(10)
+        ]
         root_idx = 0
         self.graph_branches.extend_root_from_begin(
-            centerline=centerline,
-            contour_points=contour_points,
-            centerline_radius=centerline_radius,
+            branch=branch,
             root_idx=root_idx,
         )
 
-        expected_centerline = np.vstack((centerline[1:], np.zeros_like(centerline[1:])))
-        expected_contour_points = np.array(
-            [[[1.0] * 3] for _ in range(10)] + [[[0.0] * 3] for _ in range(10)],
-            dtype=np.float64,
-        )
-        expected_radius = np.array([1.0] * 10 + [0.0] * 10, dtype=np.float64)
-        expected_node = np.ones(shape=(3,), dtype=np.float64)
+        expected_branch = branch[::-1][:-1] + input_branch
 
-        assert_almost_equal(expected_centerline, self.graph_branches.centerlines[0])
-        assert_almost_equal(
-            expected_contour_points,
-            np.array(self.graph_branches.contours_points[0], dtype=np.float64),
-        )
-        assert_almost_equal(
-            expected_radius,
-            np.array(self.graph_branches.centerline_radius[0], dtype=np.float64),
-        )
-        assert_almost_equal(expected_node, self.graph_branches.nodes[0])
-        self.assertEqual(
-            self.graph_branches.centerline_markups[0].GetNumberOfControlPoints(), 20
-        )
-        self.assertEqual(
-            self.graph_branches.contour_points_markups[0].GetNumberOfControlPoints(), 20
-        )
+        self.assertEqual(len(self.graph_branches.branch_list), 1)
+        custom_iterable_assertion(expected_branch, self.graph_branches.branch_list[0])
 
     def test_20_restore_lists_from_graph(self):
-        def custom_iterable_assertion(list_1: list, list_2: list):
-            for item_1, item_2 in zip(list_1, list_2):
-                assert type(item_1) is type(item_2)
-                if type(item_1) in [list, tuple]:
-                    custom_iterable_assertion(item_1, item_2)
-                elif isinstance(item_1, np.ndarray):
-                    assert_almost_equal(item_1, item_2)
-                elif type(item_1) in [float, int, np.float64]:
-                    assert isclose(item_1, item_2)
-                else:
-                    assert item_1 == item_2
-
         graph_path = get_resources_path().joinpath("graph_tree.json")
         with open(graph_path) as f:
             js_graph = json.load(f)
@@ -537,24 +509,17 @@ class Graph_branchesTest(unittest.TestCase):
 
         lists = restore_lists_from_graph(graph)
 
-        tempfile_path = Path(slicer.app.temporaryPath)
-        filename = self.graph_branches.save_networkX(
+        tempfile_path = Path(slicer.app.temporaryPath).joinpath(
+            f"graph_tree_{datetime.now().strftime('%Y-%m-%d_%H:%M:%S')}"
+        )
+        save_path = self.graph_branches.save_networkX(
             forced_path=tempfile_path, show_success_window=False
         )
-        self.assertIsNotNone(filename)
+        self.assertIsNotNone(save_path)
+        self.addCleanup(self.remove_files, save_path)
+        self.assertTrue(save_path.exists())
 
-        files = [
-            file
-            for file in tempfile_path.iterdir()
-            if file.is_file()
-            and file.name.startswith(filename)
-            and (file.name.endswith(".json") or file.name.endswith(".pickle"))
-        ]
-        self.addCleanup(self.remove_files, files)
-        self.assertEqual(len(files), 2)
-
-        new_graph_path = [file for file in files if file.name.endswith(".json")][0]
-        with open(new_graph_path) as f:
+        with open(save_path) as f:
             js_graph = json.load(f)
         graph: nx.DiGraph = json_graph.node_link_graph(js_graph)
         new_lists = restore_lists_from_graph(graph)

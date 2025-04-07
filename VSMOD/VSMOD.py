@@ -8,6 +8,7 @@ import slicer
 import slicer.util
 import vtk
 import json
+from pathlib import Path
 from math import radians
 
 from slicer import (
@@ -52,7 +53,7 @@ from ransac_slicer.popup_utils import (
     CustomStatusDialog,
 )
 from ransac_slicer.volume import Volume
-from ransac_slicer.region_growing_seeds import paint_segments, _compute_draw_order
+from ransac_slicer.region_growing_seeds import paint_segments
 from ransac_slicer.jit_compiled_functions import numba_close
 
 from networkx.readwrite import json_graph
@@ -263,7 +264,7 @@ class VSMODWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         )
 
         self.ui.exportTreeButton.connect(
-            "clicked(bool)", self.graph_branches.save_networkX
+            "clicked(bool)", lambda: self.graph_branches.save_networkX(forced_path=None)
         )
         self.ui.loadTreeArchitectureButton.connect(
             "clicked(bool)", self.onLoadTreeArchitecture
@@ -518,12 +519,12 @@ class VSMODWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         if len(self.graph_branches.names) != 0:
             self.ui.clearTree.toolTip = "Clear all tree."
             self.ui.clearTree.enabled = True
-            self.ui.exportTreeButton.toolTip = "Export the Network X graph of the centerlines and contour points as JSON and pickle files."
+            self.ui.exportTreeButton.toolTip = "Export the Network X graph of the centerlines and contour points as json file."
             self.ui.exportTreeButton.enabled = True
         else:
             self.ui.clearTree.toolTip = "Tree is already empty."
             self.ui.clearTree.enabled = False
-            self.ui.exportTreeButton.toolTip = "There is nothing to save."
+            self.ui.exportTreeButton.toolTip = "There is nothing to export."
             self.ui.exportTreeButton.enabled = False
 
     def checkCanPlacePoint(self, *args):
@@ -810,7 +811,6 @@ class VSMODWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
                 max_number_of_cylinders=self.parameterNode.maxNumberOfCylinders,
                 smart_diameter_selection=self.ui.smartDiameterSelection.checked,
                 graph_branches=self.graph_branches,
-                isNewBranch=self.ui.createBranch.text == "Create New Branch",
                 progress_dialog=progress_dialog,
             )
 
@@ -876,21 +876,17 @@ class VSMODWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
             slicer.mrmlScene.RemoveObserver(self.nodeDeletionObserverTag)
             self.nodeDeletionObserverTag = None
 
-            branch_draw_order = _compute_draw_order(
-                self.graph_branches.nodes, self.graph_branches.edges
-            )
-
             # Create the segments and paint them
             paint_segments(
                 volume_node=self.parameterNode.inputVolume,
-                centerlines=self.graph_branches.centerlines,
+                branches=self.graph_branches.branch_list,
                 centerline_names=self.graph_branches.names,
-                radius=self.graph_branches.centerline_radius,
-                branch_draw_order=branch_draw_order,
+                nodes=self.graph_branches.nodes,
+                edges=self.graph_branches.edges,
                 segmentation_node=self.segmentationNode,
                 reduction_factor=self.parameterNode.reductionFactor,
                 radius_reduction_threshold=self.parameterNode.diameterReductionThreshold
-                / 2,  # Divide by 2 since it's the radius that is asked
+                / 2,  # Divide by 2 since the radius is asked
                 contour_distance=self.parameterNode.contourDistance,
                 merge_all_vessels=self.ui.mergeAllVessels.checked,
             )
@@ -957,7 +953,7 @@ class VSMODWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         """
         dialog = qt.QFileDialog()
         file_path = dialog.getOpenFileName(
-            None, "Choose a file", "", "JSON file (*.json)"
+            None, "Choose a file", Path.home(), "JSON file (*.json)"
         )
 
         # cancel any action if the user cancel / close the window / press escape
@@ -1042,7 +1038,6 @@ class VSMODLogic(ScriptedLoadableModuleLogic):
         max_number_of_cylinders: int,
         smart_diameter_selection: bool,
         graph_branches: GraphBranches,
-        isNewBranch: bool,
         progress_dialog: CustomStatusDialog,
     ) -> GraphBranches:
         """
@@ -1105,7 +1100,6 @@ class VSMODLogic(ScriptedLoadableModuleLogic):
             max_number_of_cylinders=max_number_of_cylinders,
             smart_diameter_selection=smart_diameter_selection,
             graph_branches=graph_branches,
-            isNewBranch=isNewBranch,
             progress_dialog=progress_dialog,
         )
 

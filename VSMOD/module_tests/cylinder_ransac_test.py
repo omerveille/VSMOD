@@ -1,6 +1,9 @@
 import unittest
 
 import numpy as np
+import networkx as nx
+from networkx.readwrite import json_graph
+import json
 import slicer
 
 from ransac_slicer.cylinder_ransac import (
@@ -12,6 +15,7 @@ from ransac_slicer.cylinder_ransac import (
 )
 from ransac_slicer.volume import Volume
 from ransac_slicer.cylinder import Cylinder
+from ransac_slicer.graph_branches import restore_lists_from_graph
 from .test_utils import get_resources_path, load_object_from_path
 from ransac_slicer.popup_utils import CustomStatusDialog
 
@@ -23,9 +27,6 @@ class Cylinder_ransacTest(unittest.TestCase):
 
         ressource_test_dir = get_resources_path()
         volume_path = ressource_test_dir.joinpath("IXI002-Guys-0828-MRA.nii.gz")
-        example_cylinder_path = ressource_test_dir.joinpath("cylinder_ransac").joinpath(
-            "example_cylinder.pickle"
-        )
 
         # Prepare the volume object
         volume = load_object_from_path(volume_path)
@@ -51,8 +52,12 @@ class Cylinder_ransacTest(unittest.TestCase):
             nb_iter=0,
         )
 
-        # Prepare a starting cylinder
-        cls.example_cylinder = load_object_from_path(example_cylinder_path)
+        graph_path = get_resources_path().joinpath("graph_tree.json")
+        with open(graph_path) as f:
+            js_graph = json.load(f)
+        graph: nx.DiGraph = json_graph.node_link_graph(js_graph)
+        branch_list, _, _, _, _ = restore_lists_from_graph(graph)
+        cls.example_cylinder = branch_list[0][0]
 
     def test_01_sample(self):
         points = sample(
@@ -75,10 +80,8 @@ class Cylinder_ransacTest(unittest.TestCase):
         )
 
     def test_03_next_cylinder(self):
-        self.assertIsNotNone(
-            next_cylinder(self.vol, self.example_cylinder, self.cfg)[0]
-        )
-        self.assertIsNone(next_cylinder(self.vol, Cylinder(), self.fail_cfg)[0])
+        self.assertIsNotNone(next_cylinder(self.vol, self.example_cylinder, self.cfg))
+        self.assertIsNone(next_cylinder(self.vol, Cylinder(), self.fail_cfg))
 
     def test_04_track_branch(self):
         progress_dialog = CustomStatusDialog(
@@ -88,26 +91,20 @@ class Cylinder_ransacTest(unittest.TestCase):
             height=50,
         )
 
-        centerline, _, _, _ = track_branch(
+        tracked_cylinders = track_branch(
             vol=self.vol,
             cyl=self.example_cylinder,
             cfg=self.cfg,
-            centerline=np.empty((0, 3)),
-            centerline_radius=[],
-            contour_points=[],
             already_tracked_cylinders=[],
             progress_dialog=progress_dialog,
         )
-        self.assertTrue(len(centerline) > 1)
+        self.assertTrue(len(tracked_cylinders) > 1)
 
-        centerline, _, _, _ = track_branch(
+        tracked_cylinders = track_branch(
             vol=self.vol,
             cyl=self.example_cylinder,
             cfg=self.fail_cfg,
-            centerline=np.empty((0, 3)),
-            centerline_radius=[],
-            contour_points=[],
             already_tracked_cylinders=[],
             progress_dialog=progress_dialog,
         )
-        self.assertTrue(len(centerline) <= 0)
+        self.assertTrue(len(tracked_cylinders) == 0)

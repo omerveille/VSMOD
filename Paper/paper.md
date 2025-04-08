@@ -1,7 +1,7 @@
 ---
 title: "VSMOD: A Vessel Segmentation and MODelization plugin for 3D Slicer"
 tags:
-  - 3D Slicer
+  - 3D Slicer plugin
   - medical imaging
   - image segmentation
   - annotation

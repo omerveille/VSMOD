@@ -80,7 +80,7 @@ class VSMOD(ScriptedLoadableModule):
 A 3D Slicer Vessel Segmentation and MODelization plugin.
 """
         self.parent.acknowledgementText = """
-This plugin is an end-of-study project, made by Azéline Aillet (Student at EPITA) and Gabriel Husak (Student at EPITA), under the direction of Odyssée Merveille (CREATIS) and Morgane Des Ligneris (CREATIS).
+This plugin is an end-of-study project, made by Azéline Aillet (Former student at EPITA) and Gabriel Husak (Former student at EPITA), under the direction of Odyssée Merveille (CREATIS) and Morgane Des Ligneris (CREATIS).
 The RANSAC code is based on the previous work of Jack CARBONERO (CReSTIC), Guillaume DOLLE (LMR) and Nicolas PASSAT (CReSTIC) on the plugin vestract.
 The hierarchy code is based on the work of Lucie Macron (Kitware SAS), Thibault Pelletier (Kitware SAS), Camille Huet (Kitware SAS), Leo Sanchez (Kitware SAS) from the RVesselX plugin.
 """
@@ -1039,7 +1039,7 @@ class VSMODLogic(ScriptedLoadableModuleLogic):
         smart_diameter_selection: bool,
         graph_branches: GraphBranches,
         progress_dialog: CustomStatusDialog,
-    ) -> GraphBranches:
+    ) -> float:
         """
         Prepare the volume and run the RANSAC algorithm using the user parameters.
 
@@ -1059,7 +1059,6 @@ class VSMODLogic(ScriptedLoadableModuleLogic):
         smart_diameter_selection: flag to indicate whether we override the radius value entered with the radius
             of the closest cylinder of the input cylinder.
         graph_branches: object holding the graph of vessels branches.
-        isNewBranch: flag to tell if it is the first branch or not.
         progress_dialog: UI window to inform the user on the state of the branch tracking.
 
         Returns

@@ -15,11 +15,10 @@ import qt
 
 def interpolate_point(
     cyl_0: Cylinder, cyl_1: Cylinder, vol: Volume, cfg: Config, distance: float
-) -> tuple[list[np.ndarray], list[list[np.ndarray]]]:
+) -> list[Cylinder]:
     """
     Interpolate points between two cylinders.
     Points must be sparsed from at least a certain distance.
-    Each new centerline point comes with its associated contour points.
 
     Parameters
     ----------
@@ -32,11 +31,8 @@ def interpolate_point(
     Returns
     ----------
 
-    list[np.ndarray]
-        A list of center points interpolated inbetween cyl_0 and cyl_1, both excluded.
-
-    list[list[np.ndarray]]
-        A list of contours points, each center point has its list of contours.
+    list[Cylinder]
+        a list of interpolated cylinders inbetween cyl_0 and cyl_1, both excluded.
     """
     direction = cyl_1.center - cyl_0.center
     radius_diff = cyl_1.radius - cyl_0.radius
@@ -69,14 +65,13 @@ def interpolate_centerline(
     vol: Volume,
     cfg: Config,
     distance: float,
-) -> tuple[list[np.ndarray], list[list[np.ndarray]], list[float]]:
+) -> list[Cylinder]:
     """
     Refine the points of a centerline according to a certain minimum distance between points.
 
     Parameters
     ----------
-    cylinders: cylinder fitted through RANSAC algorithm.
-    contour_points: list of contour point of each cylinder.
+    cylinders: cylinders fitted through RANSAC algorithm.
     vol: the volume from which points are sampled.
     cfg: configuration regarding the RANSAC algorithm.
     distance: minimum distance between interpolated points allowed.
@@ -84,16 +79,10 @@ def interpolate_centerline(
     Returns
     ----------
 
-    list[np.ndarray]
-    A list of center points.
-
-    list[list[np.ndarray]]
-    A list of contours points, each center point has its list of contours.
-
-    list[float]
-    A list of underestimated radius, each center point has an underestimated radius.
+    list[Cylinder]:
+        cylinders fitted through RANSAC algorithm with possibly interpolated cylinder inbetween
     """
-    new_centerline = [cylinders[0]]
+    new_cylinders = [cylinders[0]]
 
     for idx in CustomProgressBar(
         iterable=range(len(cylinders) - 1),
@@ -101,7 +90,7 @@ def interpolate_centerline(
         windowTitle="Interpolating centerline points...",
         width=300,
     ):
-        tmp_centerline = interpolate_point(
+        inbetween_cylinders = interpolate_point(
             cylinders[idx],
             cylinders[idx + 1],
             vol,
@@ -109,10 +98,10 @@ def interpolate_centerline(
             distance,
         )
 
-        new_centerline += tmp_centerline
-        new_centerline.append(cylinders[idx + 1])
+        new_cylinders += inbetween_cylinders
+        new_cylinders.append(cylinders[idx + 1])
 
-    return new_centerline
+    return new_cylinders
 
 
 def run_ransac(
@@ -153,7 +142,6 @@ def run_ransac(
     smart_diameter_selection: flag to indicate whether we override the radius value entered with the radius
         of the closest cylinder of the input cylinder.
     graph_branches: the graph branch object.
-    isNewBranch: flag to tell if it is the first branch or not.
     progress_dialog: UI window to inform the user on the state of the branch tracking.
 
     Returns

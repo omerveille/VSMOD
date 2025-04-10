@@ -6,7 +6,7 @@ project(VSMOD)
 # Extension meta-information
 set(EXTENSION_HOMEPAGE "https://www.slicer.org/wiki/Documentation/Nightly/Extensions/VSMOD")
 set(EXTENSION_CATEGORY "Segmentation")
-set(EXTENSION_CONTRIBUTORS "Azéline Aillet (Student at EPITA), Gabriel Husak (Student at EPITA)")
+set(EXTENSION_CONTRIBUTORS "Azéline Aillet (Former student at EPITA), Gabriel Husak (Former student at EPITA)")
 set(EXTENSION_DESCRIPTION "A 3D Slicer Vessel Segmentation and MODelization plugin.")
 set(EXTENSION_ICONURL "https://www.example.com/Slicer/Extensions/VSMOD.png")
 set(EXTENSION_SCREENSHOTURLS "https://www.example.com/Slicer/Extensions/VSMOD/Screenshots/1.png")

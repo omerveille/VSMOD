@@ -143,7 +143,16 @@ class GraphBranches:
         self.node_selected = (-1, -1)
 
     def update_markup(self, branch_idx: int):
-        """ """
+        """
+        Update the markup in the scene by reloading its points.
+        Used after an update on branch's cylinder.
+
+        Parameters
+        ----------
+
+        branch_idx: the index of the branch that will be updated.
+
+        """
         slicer.util.updateMarkupsControlPointsFromArray(
             self.centerline_markups[branch_idx],
             np.array(
@@ -163,9 +172,6 @@ class GraphBranches:
         ----------
 
         name: name of the branch.
-        centerline: array containing the points of the centerline.
-        contour_points: array of array of contour points, contour_points[0] are the points sampled around centerline[0],
-        contour_points[1] are the points sampled around centerline[1] etc...
         """
         centerline_markup = slicer.mrmlScene.AddNewNodeByClass(
             "vtkMRMLMarkupsCurveNode"
@@ -211,10 +217,7 @@ class GraphBranches:
         ----------
 
         edge: the edge to be added to the graph.
-        centerline: array containing the points of the centerline.
-        contour_points: array of array of contour points, contour_points[0] are the points sampled around centerline[0],
-        contour_points[1] are the points sampled around centerline[1] etc...
-        centerline_radius: array containing the underestimated radius of each point of the centerline.
+        branch: the cylinders that define the branch.
         parent_node: id of its parent node, None if it is the root.
         isFromSplitBranch: flag to check if this new branch is from a split, if it is not from a split we may
         merge branch with its single children.
@@ -348,6 +351,7 @@ class GraphBranches:
 
         Returns
         -------
+
         Union[None, str]
           None if the user did not enter a folder path, otherwise returns the name of the saved file.
         """
@@ -831,10 +835,7 @@ class GraphBranches:
 
         Parameters
         ----------
-        centerline: array containing the points of the centerline.
-        contour_points: array of array of contour points, contour_points[0] are the points sampled around centerline[0],
-        contour_points[1] are the points sampled around centerline[1] etc...
-        centerline_radius: array containing the underestimated radius of each point of the centerline.
+        branch: the branch that will extend the root.
         root_idx: index of the root branch.
         """
 

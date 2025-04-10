@@ -8,10 +8,7 @@
       - [Advanced RANSAC configuration 🔬](#advanced-ransac-configuration-)
     - [The segmentation tab 🧩](#the-segmentation-tab-)
       - [Advanced features ⚙️](#advanced-features-️)
-  - [For developers 👩‍💻👨‍💻](#for-developers-)
-    - [Setup pre-commit 🏗️](#setup-pre-commit-️)
-    - [Enforce pre-commit to run 🏃](#enforce-pre-commit-to-run-)
-  - [Acknowledgment and citations 🙏](#acknowledgment-and-citations-)
+  - [Acknowledgments and citations 🙏](#acknowledgments-and-citations-)
 <!-- TOC -->
 ## Overview 🌐
 
@@ -63,6 +60,8 @@ Additionally, you can configure the `Centerline Resolution` parameter to ensure 
 
 Finally, click on the `Create root` / `Create new branch` button in order to start finding a centerline !
 
+note: the first time you will start a tracking, the program will compile some crucial functions, and thus will result in a 1-2 minutes of 3D Slicer freezing asking to be shutdown. (do not shut it down)
+
 [first_branch.webm](https://github.com/Leirbag-gabrieL/PulmonaryArteriesSegmentor/assets/91014653/2fdbb671-36bd-47d8-a145-2a410324bd7a)
 
 Once the processing is done, you can add new branches to the tree by adding two new starting and direction points by doing the same process.
@@ -89,14 +88,16 @@ This tab is made to configure how the RANSAC algorithm will behave.
 
 In this plugin, RANSAC is used to fit cylinders inside a vessel to approximate its shape. Points are sampled from a region around the vessel, and the algorithm tries to build cylinders from these points. It evaluates each cylinder based on the distance of points to its central axis, categorizing points as "inliers" or "outliers", and ultimately selects the cylinder with the most inliers. Consequently, the parameters control the algorithm's flexibility.
 
-Here is an illustration showing a point cloud with points at distances between 0.8 and 1.2 from the cylinder axis.
-![Cylinder illustration](VSMOD/Resources/Images/cylinder_plot.png)
-
 These are the configurable parameters of the RANSAC algorithm, and their meaning:
 
 - `Inlier points`: A threshold parameter defining the minimum number of inliers required for a cylinder to be considered valid.
 - `Threshold`: The maximum allowed distance (as a fraction of the cylinder's radius) for a point to be considered an inlier. For example, if the previous cylinder radius is 1 mm, a point 1.2 mm away is considered an inlier with a threshold of 33%, since \(1.2 - 1 = 0.2\) and \(0.2 < 0.33\).
+
+Here is an illustration showing a point cloud with points at distances between 0.8 and 1.2 from the cylinder axis and the impact of the `Theshold` parameter on the inliers.
+![Cylinder illustration](Images/circle_plot.png)
+
 - `Maximum inter-cylinder angle`: The maximum angle allowed between two consecutive cylinders. For highly curved vessels, you may set this value near 90°; for straighter vessels, closer to 60°.
+
 - `Min Attempts per Cylinder`: The minimum number of attempts the algorithm will make to find a suitable cylinder.
 - `Max Attempts per Cylinder`: The maximum number of attempts the algorithm will make if it does not find a suitable cylinder. (Thus, the actual number of tries will lie in the interval \([minimum, minimum + maximum]\).)
 - `Max Cylinders per Vessel`: The maximum number of cylinders the algorithm can fit during a single tracking session.
@@ -131,28 +132,9 @@ else:
 
 - `Merge all vessels into a single segment`: Allows you to merge all individual vessel segments into one.
 
-## For developers 👩‍💻👨‍💻
+## Acknowledgments and citations 🙏
 
-### Setup pre-commit 🏗️
-
-We use pre-commit to ensure consistent code formatting. If you want to contribute, please install it as follows:
-
-```shell
-pip install pre-commit
-pre-commit install
-```
-
-After that, all added Python and Markdown files will be automatically formatted when committed.
-
-### Enforce pre-commit to run 🏃
-
-```shell
-pre-commit run --all-files
-```
-
-## Acknowledgment and citations 🙏
-
-This plugin was initially an end-of-study project, made by Azéline Aillet (Student at EPITA) and Gabriel Husak (Student at EPITA), under the direction of Odyssée Merveille (CREATIS) and Morgane Des Ligneris (CREATIS).
+This plugin was initially an end-of-study project, made by Azéline Aillet (Former student at EPITA) and Gabriel Husak (Former student at EPITA), under the direction of Odyssée Merveille (CREATIS) and Morgane Des Ligneris (CREATIS).
 
 The RANSAC code is based on the previous work of Jack CARBONERO (CReSTIC), Guillaume DOLLE (LMR) and Nicolas PASSAT (CReSTIC) on the plugin vestract.
 

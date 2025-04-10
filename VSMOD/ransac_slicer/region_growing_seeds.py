@@ -12,7 +12,7 @@ import networkx as nx
 
 def _compute_draw_order(
     graph_branches_nodes: list[np.ndarray], graph_branches_edges: list[tuple[int, int]]
-):
+) -> list[int]:
     """
     Define the order in which the branches will be drawn.
     We draw in reverse bfs order, so that parent branches are always drawn
@@ -27,8 +27,8 @@ def _compute_draw_order(
     Returns
     ----------
 
-    list[int]: indexes of the branch to draw.
-    We draw from first to last listed.
+    list[int]:
+        indexes of the branch to draw. Drawn from first to last listed.
     """
 
     G = nx.DiGraph()
@@ -165,13 +165,13 @@ def paint_segments(
     ----------
 
     volume_node: input volume.
-    centerlines: centerlines segmented.
-    centerline_names: list of the centerline names, will be used for the segmentation name.
-    radius: list of radius of each centerline points.
-    branch_draw_order: list of indexes in which branch will be drawn.
+    branches: list of all the branches segmented.
+    centerline_names: list of the names of the centerlines.
+    nodes: lists of the nodes of the branches graph.
+    edges: lists of the edges of the branches graph.
     segmentation_node: segmentation_node on which segment will be added and updated.
-    radius_reduction_threshold: threshold from which a reduction is applied to the radius.
     reduction_factor: amount of the reduction.
+    radius_reduction_threshold: threshold from which a reduction is applied to the radius.
     contour_distance: distance in voxel between the vessel and the contour.
     merge_all_vessels: if True, this flag will put every vessels in the same segment, instead of separeted ones.
 
@@ -424,7 +424,7 @@ def paint_segments(
 
     # Outter edge
     progress_dialog.set_text("Computing the outter edge ...")
-    # It's technicly incorrect to use a ball, as voxels are not the same size, but well if it works fine ...
+    # It's technicly incorrect to use a ball, as voxels are not perfect cubes, but well if it works fine ...
     contours_dilated = binary_dilation(contours_map, ball(radius=contour_distance + 2))
 
     # Inner edge

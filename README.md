@@ -34,7 +34,7 @@ To install the plugin, you have to do the following steps:
 4) A popup will show, select `Yes`.⚠️ Make sure you are connected to the internet. When loading the module, it will check if you have all the dependencies and attempt to download the missing ones. ⚠️
 5) After downloading the missing dependencies, 3D Slicer will be automatically restarted, the plugin can be found in the module drop-down menu, under the `Segmentation` category.
 
-[install.webm](https://github.com/Leirbag-gabrieL/PulmonaryArteriesSegmentor/assets/91014653/34f93e8a-386e-4120-82c6-3b046f5a420b)
+[plugin_install.webm](https://github.com/user-attachments/assets/1708b30e-80d1-4638-b632-66233986236f)
 
 Tips: If you struggle to find any of those modules, you can use the magnifying glass to search modules by name.
 
@@ -60,25 +60,25 @@ Additionally, you can configure the `Centerline Resolution` parameter to ensure 
 
 Finally, click on the `Create root` / `Create new branch` button in order to start finding a centerline !
 
-note: the first time you will start a tracking, the program will compile some crucial functions, and thus will result in a 1-2 minutes of 3D Slicer freezing asking to be shutdown. (do not shut it down)
+note: the first time you will start a tracking, the program will compile some crucial functions (it will also happen each time you modifies the files that needs to be compiled), and thus will result in a 1-2 minutes of 3D Slicer freezing asking to be shutdown. Do not shut it down.
 
-[first_branch.webm](https://github.com/Leirbag-gabrieL/PulmonaryArteriesSegmentor/assets/91014653/2fdbb671-36bd-47d8-a145-2a410324bd7a)
+[plugin_first_branch.webm](https://github.com/user-attachments/assets/49aeac4d-01bd-46be-b817-89c26a63b19d)
 
 Once the processing is done, you can add new branches to the tree by adding two new starting and direction points by doing the same process.
 
-[second_branch.webm](https://github.com/Leirbag-gabrieL/PulmonaryArteriesSegmentor/assets/91014653/a6ca1c94-bc54-421c-97b3-1c6fbf3118c2)
+[plugin_second_branch.webm](https://github.com/user-attachments/assets/da9bfca0-50b5-47d3-9756-d57a20a47c6c)
 
 You can delete a branch from the hierarchy by clicking on the bin icon, or clear the whole tree by clicking on the `Clear tree` button.
 
-[deleting_branch.webm](https://github.com/Leirbag-gabrieL/PulmonaryArteriesSegmentor/assets/91014653/dcea0cd5-aac7-4867-9e52-1abc206556b2)
+[plugin_delete_branch.webm](https://github.com/user-attachments/assets/1c0039ad-1181-4614-aa62-0001164b3219)
 
 If the centerline is correct until a certain point where it is not, you can delete the irrelevant part by selecting the last correct point and right-clicking the concerned artery in the hierarchy, and selecting `Remove end of the branch`.
 This correction is also available for the beginning of the root which can be removed as well.
-[remove_end_of_branch.webm](https://github.com/Leirbag-gabrieL/PulmonaryArteriesSegmentor/assets/91014653/2d9fdb01-f2fb-41e1-b7aa-c03342710ef3)
+[plugin_trim_branch.webm](https://github.com/user-attachments/assets/6c716997-13ac-4b99-bb9d-bd057f574819)
 
 If you want, you can also save the hierarchy of all the vessel points into a NetworkX graph, which is exported in a `.json` file. The json file can later be used to reload a previous hierarchy thanks to the `Load Tree from graph` button.
 
-[save_as_json.webm](https://github.com/Leirbag-gabrieL/PulmonaryArteriesSegmentor/assets/91014653/6ae7029b-8293-400b-9ad5-b8aa047892c5)
+[plugin_save_branch.webm](https://github.com/user-attachments/assets/a5157365-29db-429f-a3f0-905d2e4af7dd)
 
 #### Advanced RANSAC configuration 🔬
 
@@ -106,11 +106,11 @@ Here is an illustration showing a point cloud with points at distances between 0
 
 The segmentation tab is straightforward. You have a button labeled `Create Segmentation Seeds`. Clicking this button generates a new segmentation, which serves as the initialization for 3D Slicer's region-growing algorithm. You can further adjust or edit the generated segmentation using the segmentation widget.
 
-[generating_segmentation_start.webm](https://github.com/Leirbag-gabrieL/PulmonaryArteriesSegmentor/assets/91014653/1a677776-0755-4805-862d-9bb474498c92)
+[plugin_seeds_branch.webm](https://github.com/user-attachments/assets/e964a692-283a-4a8b-aae8-798d1b8a32c3)
 
 To finalize segmentation, you just have to run 3D Slicer's region-growing algorithm which can be found in the plugin directly in the tools of the segmentation widget.
 
-[region_growing.webm](https://github.com/Leirbag-gabrieL/PulmonaryArteriesSegmentor/assets/91014653/1972b1e9-8f2d-4f1c-87ae-53d16eaf0362)
+[plugin_region_branch.webm](https://github.com/user-attachments/assets/42419fda-2f2b-4487-8ff7-668e8ef312fd)
 
 #### Advanced features ⚙️
 

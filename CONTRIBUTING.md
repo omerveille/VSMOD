@@ -19,7 +19,7 @@ For example, you may want to:
 - Submit a feature
 - Simply ask a question for clarification
 
-Write us a ticket using the [Issues](https://github.com/omerveille/PulmonaryArteriesSegmentor/issues).
+Write us a ticket using the [Issues](https://github.com/omerveille/VSMOD/issues).
 
 If you want to directly contribute with code, please refer to the next sections.
 
@@ -36,7 +36,7 @@ In order to contribute to this project follow these steps :
 - [Fork and clone](https://help.github.com/articles/fork-a-repo/) the repository.
 - Create a branch.
 - [Push](https://help.github.com/articles/pushing-to-a-remote/) the branch to your GitHub fork.
-- Create a [Pull Request](https://github.com/omerveille/PulmonaryArteriesSegmentor/pulls).
+- Create a [Pull Request](https://github.com/omerveille/VSMOD/pulls).
 
 As for commit message, we follow these conventions for commit messages and kindly ask you to do the same:
 

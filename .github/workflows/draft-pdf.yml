@@ -3,6 +3,7 @@ on:
   push:
     paths:
       - 'Paper/**'
+      - .github/workflows/draft-pdf.yml
 
 jobs:
   paper:
@@ -19,5 +20,5 @@ jobs:
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: paper-draft
+          name: paper
           path: Paper/paper.pdf

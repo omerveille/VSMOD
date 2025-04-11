@@ -1,0 +1,936 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>VSMOD</class>
+ <widget class="qMRMLWidget" name="VSMOD">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>483</width>
+    <height>871</height>
+   </rect>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QTabWidget" name="tabWidget">
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="QWidget" name="centerline">
+      <attribute name="title">
+       <string>Centerline</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_3">
+       <item>
+        <widget class="ctkCollapsibleButton" name="inputsCollapsibleButton">
+         <property name="text">
+          <string>Data I/O</string>
+         </property>
+         <layout class="QFormLayout" name="formLayout">
+          <item row="0" column="0">
+           <widget class="QLabel" name="inputVolumeLabel">
+            <property name="text">
+             <string>Input volume:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="qMRMLNodeComboBox" name="inputSelector">
+            <property name="toolTip">
+             <string>Pick the input volume of the algorithm.</string>
+            </property>
+            <property name="nodeTypes">
+             <stringlist notr="true">
+              <string>vtkMRMLScalarVolumeNode</string>
+             </stringlist>
+            </property>
+            <property name="showChildNodeTypes">
+             <bool>false</bool>
+            </property>
+            <property name="addEnabled">
+             <bool>false</bool>
+            </property>
+            <property name="removeEnabled">
+             <bool>false</bool>
+            </property>
+            <property name="renameEnabled">
+             <bool>false</bool>
+            </property>
+            <property name="SlicerParameterName" stdset="0">
+             <string>inputVolume</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="startingPointListLabel">
+            <property name="text">
+             <string>Starting Point List</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="directionLabel">
+            <property name="text">
+             <string>Direction Point List</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="qMRMLNodeComboBox" name="startingPointSelector">
+            <property name="toolTip">
+             <string>Select a starting point for the first cylinder.</string>
+            </property>
+            <property name="nodeTypes">
+             <stringlist notr="true">
+              <string>vtkMRMLMarkupsFiducialNode</string>
+             </stringlist>
+            </property>
+            <property name="showChildNodeTypes">
+             <bool>false</bool>
+            </property>
+            <property name="baseName">
+             <string>s</string>
+            </property>
+            <property name="noneEnabled">
+             <bool>true</bool>
+            </property>
+            <property name="addEnabled">
+             <bool>true</bool>
+            </property>
+            <property name="removeEnabled">
+             <bool>true</bool>
+            </property>
+            <property name="renameEnabled">
+             <bool>true</bool>
+            </property>
+            <property name="noneDisplay">
+             <string>Select a Starting Point</string>
+            </property>
+            <property name="SlicerParameterName" stdset="0">
+             <string>startingPoint</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="qMRMLNodeComboBox" name="directionPointSelector">
+            <property name="toolTip">
+             <string>Select a direction point for the first cylinder.</string>
+            </property>
+            <property name="nodeTypes">
+             <stringlist notr="true">
+              <string>vtkMRMLMarkupsFiducialNode</string>
+             </stringlist>
+            </property>
+            <property name="showChildNodeTypes">
+             <bool>false</bool>
+            </property>
+            <property name="baseName">
+             <string>d</string>
+            </property>
+            <property name="noneEnabled">
+             <bool>true</bool>
+            </property>
+            <property name="addEnabled">
+             <bool>true</bool>
+            </property>
+            <property name="removeEnabled">
+             <bool>true</bool>
+            </property>
+            <property name="renameEnabled">
+             <bool>true</bool>
+            </property>
+            <property name="noneDisplay">
+             <string>Select a Direction Point</string>
+            </property>
+            <property name="SlicerParameterName" stdset="0">
+             <string>directionPoint</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="measureLabel">
+            <property name="text">
+             <string>Measuring List</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="qMRMLNodeComboBox" name="measureDistanceSelector">
+            <property name="toolTip">
+             <string>Put two points to measure the diameter of a vessel.</string>
+            </property>
+            <property name="nodeTypes">
+             <stringlist>
+              <string>vtkMRMLMarkupsLineNode</string>
+             </stringlist>
+            </property>
+            <property name="hideChildNodeTypes">
+             <stringlist notr="true"/>
+            </property>
+            <property name="baseName">
+             <string>distance</string>
+            </property>
+            <property name="interactionNodeSingletonTag">
+             <string notr="true"/>
+            </property>
+            <property name="SlicerParameterName" stdset="0">
+             <string>measureDistance</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="ctkCollapsibleButton" name="configurationCollapsibleButton">
+         <property name="text">
+          <string>Configuration</string>
+         </property>
+         <property name="collapsed">
+          <bool>false</bool>
+         </property>
+         <layout class="QFormLayout" name="formLayout_2">
+          <item row="3" column="0">
+           <widget class="QLabel" name="diameterLabel">
+            <property name="text">
+             <string>Diameter (mm)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QDoubleSpinBox" name="diameter">
+            <property name="toolTip">
+             <string>Enter the vessel diameter in millimeter. Can be measured using the &quot;Measure Diameter&quot; button.</string>
+            </property>
+            <property name="decimals">
+             <number>2</number>
+            </property>
+            <property name="minimum">
+             <double>0.000000000000000</double>
+            </property>
+            <property name="maximum">
+             <double>2000.000000000000000</double>
+            </property>
+            <property name="singleStep">
+             <double>0.100000000000000</double>
+            </property>
+            <property name="value">
+             <double>10.000000000000000</double>
+            </property>
+            <property name="SlicerParameterName" stdset="0">
+             <string>diameter</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="0">
+           <widget class="QLabel" name="centerlineResolutioLabel">
+            <property name="text">
+             <string>Centerline Resolution (mm)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="1">
+           <widget class="QDoubleSpinBox" name="centerlineResolution">
+            <property name="toolTip">
+             <string>Select the minimum space allowed between two points in the centerline. It is a post-tracking refinement.</string>
+            </property>
+            <property name="minimum">
+             <double>0.010000000000000</double>
+            </property>
+            <property name="maximum">
+             <double>1000.000000000000000</double>
+            </property>
+            <property name="value">
+             <double>5.000000000000000</double>
+            </property>
+            <property name="SlicerParameterName" stdset="0">
+             <string>centerlineResolution</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0">
+           <widget class="QLabel" name="smartDiameterSelectionLabel">
+            <property name="text">
+             <string>Automatic Diameter Selection</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QCheckBox" name="smartDiameterSelection">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="toolTip">
+             <string>Cannot be activated for the first vessel. if checked, the Diameter parameter is automatically set.</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="tristate">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QPushButton" name="placePointButton">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="toolTip">
+             <string>Start a new placing phase for starting and direction points.</string>
+            </property>
+            <property name="text">
+             <string>Place a new starting and direction point</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QPushButton" name="measureDiameterButton">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="toolTip">
+             <string>Start a new placing phase to measure the diameter of a vessel.</string>
+            </property>
+            <property name="text">
+             <string>Measure Diameter (mm)</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="ctkCollapsibleButton" name="advancedOptionCollpasibleButton">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="text">
+          <string>Advanced Ransac Configuration</string>
+         </property>
+         <property name="collapsed">
+          <bool>false</bool>
+         </property>
+         <layout class="QFormLayout" name="formLayout_4">
+          <item row="1" column="0">
+           <widget class="QLabel" name="inlierPointsLabel">
+            <property name="text">
+             <string>Inlier Points (%)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="ctkSliderWidget" name="inlierPoints">
+            <property name="focusPolicy">
+             <enum>Qt::TabFocus</enum>
+            </property>
+            <property name="toolTip">
+             <string>Select a percentage of inlier points to consider a cylinder valid.</string>
+            </property>
+            <property name="maximum">
+             <double>100.000000000000000</double>
+            </property>
+            <property name="value">
+             <double>60.000000000000000</double>
+            </property>
+            <property name="SlicerParameterName" stdset="0">
+             <string>percentInlierPoints</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="thresholdLabel">
+            <property name="text">
+             <string>Threshold (%)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="ctkSliderWidget" name="percentThreshold">
+            <property name="focusPolicy">
+             <enum>Qt::TabFocus</enum>
+            </property>
+            <property name="toolTip">
+             <string>Select the threshold for which a point is considered inlier. X % of the radius value.</string>
+            </property>
+            <property name="maximum">
+             <double>100.000000000000000</double>
+            </property>
+            <property name="value">
+             <double>30.000000000000000</double>
+            </property>
+            <property name="SlicerParameterName" stdset="0">
+             <string>percentThreshold</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="angleLabel">
+            <property name="text">
+             <string>Maximum inter-cylinder angle (°)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QDoubleSpinBox" name="maximumTurnAngle">
+            <property name="toolTip">
+             <string>Select the maximum angle a cylinder can make with its predecessor.</string>
+            </property>
+            <property name="maximum">
+             <double>90.000000000000000</double>
+            </property>
+            <property name="value">
+             <double>60.000000000000000</double>
+            </property>
+            <property name="SlicerParameterName" stdset="0">
+             <string>maximumTurnAngle</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0">
+           <widget class="QLabel" name="minAttemptsLabel">
+            <property name="text">
+             <string>Min Attempts per Cylinder</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QSpinBox" name="minNumberOfAttempts">
+            <property name="toolTip">
+             <string>Defines the minimum number of attempts made before selecting the best-fitting cylinder for a vessel part, ensuring sufficient sampling.</string>
+            </property>
+            <property name="maximum">
+             <number>99999999</number>
+            </property>
+            <property name="singleStep">
+             <number>1000</number>
+            </property>
+            <property name="value">
+             <number>20000</number>
+            </property>
+            <property name="SlicerParameterName" stdset="0">
+             <string>minNumberOfAttempts</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="0">
+           <widget class="QLabel" name="maxAttemptsLabel">
+            <property name="text">
+             <string>Max Attempts per Cylinder</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="1">
+           <widget class="QSpinBox" name="maxNumberOfAttempts">
+            <property name="toolTip">
+             <string>Defines the maximum number of extra attempts made to fit a cylinder to a vessel segment, limiting the number of iterations for computational efficiency, if a good enought cylinder has not been met yet.</string>
+            </property>
+            <property name="minimum">
+             <number>0</number>
+            </property>
+            <property name="maximum">
+             <number>99999999</number>
+            </property>
+            <property name="singleStep">
+             <number>1000</number>
+            </property>
+            <property name="value">
+             <number>10000</number>
+            </property>
+            <property name="displayIntegerBase">
+             <number>10</number>
+            </property>
+            <property name="SlicerParameterName" stdset="0">
+             <string>maxNumberOfAttempts</string>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="0">
+           <widget class="QLabel" name="maximumNumberOfCylinderLabel">
+            <property name="text">
+             <string>Max Cylinders per Vessel</string>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="1">
+           <widget class="QSpinBox" name="maxNumberOfCylinders">
+            <property name="toolTip">
+             <string>Defines the upper limit on the number of cylinders per vessel to prevent the algorithm from running indefinitely.</string>
+            </property>
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>99999999</number>
+            </property>
+            <property name="value">
+             <number>1000</number>
+            </property>
+            <property name="SlicerParameterName" stdset="0">
+             <string>maxNumberOfCylinders</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="createBranch">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
+         <property name="toolTip">
+          <string>Create Root.</string>
+         </property>
+         <property name="text">
+          <string>Create Root</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="exportTreeButton">
+         <property name="toolTip">
+          <string>Export the Network X graph of the centerlines and contour points as json file.</string>
+         </property>
+         <property name="text">
+          <string>Export Tree as graph (json)</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="loadTreeArchitectureButton">
+         <property name="toolTip">
+          <string>Load a tree architecture from a directory.</string>
+         </property>
+         <property name="text">
+          <string>Load Tree from graph (json)</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="clearTree">
+         <property name="toolTip">
+          <string>Tree is already empty.</string>
+         </property>
+         <property name="text">
+          <string>Clear Tree</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <layout class="QFormLayout" name="curveOptionsLayout">
+         <item row="0" column="0">
+          <widget class="QLabel" name="centerlineTextSizeLabel">
+           <property name="text">
+            <string>Centerline Text Size</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="ctkSliderWidget" name="centerlineTextSize">
+           <property name="focusPolicy">
+            <enum>Qt::TabFocus</enum>
+           </property>
+           <property name="toolTip">
+            <string>Changes the centerlines text size.</string>
+           </property>
+           <property name="singleStep">
+            <double>0.100000000000000</double>
+           </property>
+           <property name="pageStep">
+            <double>2.000000000000000</double>
+           </property>
+           <property name="maximum">
+            <double>20.000000000000000</double>
+           </property>
+           <property name="value">
+            <double>3.000000000000000</double>
+           </property>
+           <property name="suffix">
+            <string> %</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QPushButton" name="lockButton">
+         <property name="toolTip">
+          <string>Disable / enable interractions with the centerline and contours points in the 3D Slicer scene.</string>
+         </property>
+         <property name="text">
+          <string>Lock Tree</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="showCenterlineButton">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
+         <property name="toolTip">
+          <string>Hide / show all the centerlines.</string>
+         </property>
+         <property name="text">
+          <string>Show Centerlines</string>
+         </property>
+         <property name="checkable">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="showContourPointsButton">
+         <property name="toolTip">
+          <string>Hide / show all the contour points. (carefull 3D Slicer may freeze)</string>
+         </property>
+         <property name="text">
+          <string>Show Contour Points</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer_2">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="segmentationTab">
+      <attribute name="title">
+       <string>Segmentation</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <item>
+        <widget class="ctkCollapsibleButton" name="segmentationCollapsibleButton">
+         <property name="text">
+          <string>Segmentation Options</string>
+         </property>
+         <layout class="QFormLayout" name="formLayout_3">
+          <item row="0" column="0">
+           <widget class="QLabel" name="reductionFactorLabel">
+            <property name="text">
+             <string>Reduction Factor</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="ctkSliderWidget" name="reductionFactor">
+            <property name="focusPolicy">
+             <enum>Qt::TabFocus</enum>
+            </property>
+            <property name="toolTip">
+             <string>Select the proportion by which a vessel's diameter is reduced after the reduction threshold. </string>
+            </property>
+            <property name="singleStep">
+             <double>0.010000000000000</double>
+            </property>
+            <property name="pageStep">
+             <double>0.100000000000000</double>
+            </property>
+            <property name="maximum">
+             <double>1.000000000000000</double>
+            </property>
+            <property name="value">
+             <double>0.750000000000000</double>
+            </property>
+            <property name="SlicerParameterName" stdset="0">
+             <string>reductionFactor</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="diameterLoweringThresholdLabel">
+            <property name="text">
+             <string>Diameter Lowering Threshold (mm)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QDoubleSpinBox" name="diameterReductionThreshold">
+            <property name="toolTip">
+             <string>Select the reduction threshold. </string>
+            </property>
+            <property name="maximum">
+             <double>2000.000000000000000</double>
+            </property>
+            <property name="singleStep">
+             <double>0.010000000000000</double>
+            </property>
+            <property name="value">
+             <double>10.000000000000000</double>
+            </property>
+            <property name="SlicerParameterName" stdset="0">
+             <string>diameterReductionThreshold</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="distanceOfContourRegionLabel">
+            <property name="text">
+             <string>Distance of Contour Region (voxel)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QSpinBox" name="contourDistance">
+            <property name="toolTip">
+             <string>Configures the size of the gap between the vessels and the external boundary. The external boundary is here to define an &quot;out of vessel&quot; region of the region growing algorithm.</string>
+            </property>
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>1000</number>
+            </property>
+            <property name="value">
+             <number>4</number>
+            </property>
+            <property name="displayIntegerBase">
+             <number>10</number>
+            </property>
+            <property name="SlicerParameterName" stdset="0">
+             <string>contourDistance</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="ctkCheckBox" name="mergeAllVessels">
+            <property name="toolTip">
+             <string>Check this if you want all the vessels to be merge inside on single region.</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="mergeAllVesselsLabel">
+            <property name="text">
+             <string>Merge all vessels into a single segment</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item alignment="Qt::AlignHCenter">
+        <widget class="QPushButton" name="paintButton">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="toolTip">
+          <string>Create or update a segmentation node. It needs input volume and a branch.</string>
+         </property>
+         <property name="text">
+          <string>Create Segmentation Seeds</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="qMRMLSegmentEditorWidget" name="SegmentEditorWidget">
+         <property name="maximumNumberOfUndoStates">
+          <number>2</number>
+         </property>
+         <property name="defaultTerminologyEntrySettingsKey">
+          <string notr="true"/>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ctkCheckBox</class>
+   <extends>QCheckBox</extends>
+   <header>ctkCheckBox.h</header>
+  </customwidget>
+  <customwidget>
+   <class>ctkCollapsibleButton</class>
+   <extends>QWidget</extends>
+   <header>ctkCollapsibleButton.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ctkSliderWidget</class>
+   <extends>QWidget</extends>
+   <header>ctkSliderWidget.h</header>
+  </customwidget>
+  <customwidget>
+   <class>qMRMLNodeComboBox</class>
+   <extends>QWidget</extends>
+   <header>qMRMLNodeComboBox.h</header>
+  </customwidget>
+  <customwidget>
+   <class>qMRMLWidget</class>
+   <extends>QWidget</extends>
+   <header>qMRMLWidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>qMRMLSegmentEditorWidget</class>
+   <extends>qMRMLWidget</extends>
+   <header>qMRMLSegmentEditorWidget.h</header>
+  </customwidget>
+ </customwidgets>
+ <tabstops>
+  <tabstop>tabWidget</tabstop>
+  <tabstop>inputsCollapsibleButton</tabstop>
+  <tabstop>configurationCollapsibleButton</tabstop>
+  <tabstop>placePointButton</tabstop>
+  <tabstop>measureDiameterButton</tabstop>
+  <tabstop>diameter</tabstop>
+  <tabstop>smartDiameterSelection</tabstop>
+  <tabstop>centerlineResolution</tabstop>
+  <tabstop>advancedOptionCollpasibleButton</tabstop>
+  <tabstop>inlierPoints</tabstop>
+  <tabstop>percentThreshold</tabstop>
+  <tabstop>maximumTurnAngle</tabstop>
+  <tabstop>minNumberOfAttempts</tabstop>
+  <tabstop>maxNumberOfAttempts</tabstop>
+  <tabstop>maxNumberOfCylinders</tabstop>
+  <tabstop>createBranch</tabstop>
+  <tabstop>exportTreeButton</tabstop>
+  <tabstop>loadTreeArchitectureButton</tabstop>
+  <tabstop>clearTree</tabstop>
+  <tabstop>centerlineTextSize</tabstop>
+  <tabstop>lockButton</tabstop>
+  <tabstop>showCenterlineButton</tabstop>
+  <tabstop>showContourPointsButton</tabstop>
+  <tabstop>segmentationCollapsibleButton</tabstop>
+  <tabstop>reductionFactor</tabstop>
+  <tabstop>diameterReductionThreshold</tabstop>
+  <tabstop>contourDistance</tabstop>
+  <tabstop>mergeAllVessels</tabstop>
+  <tabstop>paintButton</tabstop>
+ </tabstops>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>VSMOD</sender>
+   <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
+   <receiver>inputSelector</receiver>
+   <slot>setMRMLScene(vtkMRMLScene*)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>391</x>
+     <y>383</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>460</x>
+     <y>88</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>VSMOD</sender>
+   <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
+   <receiver>startingPointSelector</receiver>
+   <slot>setMRMLScene(vtkMRMLScene*)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>391</x>
+     <y>383</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>609</x>
+     <y>169</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>VSMOD</sender>
+   <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
+   <receiver>directionPointSelector</receiver>
+   <slot>setMRMLScene(vtkMRMLScene*)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>391</x>
+     <y>383</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>609</x>
+     <y>198</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>VSMOD</sender>
+   <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
+   <receiver>SegmentEditorWidget</receiver>
+   <slot>setMRMLScene(vtkMRMLScene*)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>779</x>
+     <y>234</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>708</x>
+     <y>234</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>VSMOD</sender>
+   <signal>mrmlSceneChanged(vtkMRMLScene*)</signal>
+   <receiver>measureDistanceSelector</receiver>
+   <slot>setMRMLScene(vtkMRMLScene*)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>311</x>
+     <y>435</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>370</x>
+     <y>175</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

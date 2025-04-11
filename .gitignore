@@ -164,6 +164,3 @@ cython_debug/
 
 # Default module example
 DefaultModule/
-
-*.json
-*.pickle

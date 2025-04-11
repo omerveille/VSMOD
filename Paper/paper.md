@@ -29,7 +29,7 @@ affiliations:
     index: 1
   - name: EPITA Research Laboratory (LRE), Le Kremlin-Bicêtre, France
     index: 2
-  - name: Université de Reims Champagne-Ardenne, CNRS, LMR UMR 9008, 51097 Reims
+  - name: Université de Reims Champagne-Ardenne, CNRS, LMR UMR 9008, Reims
     index: 3
   - name: IUF, Institut Universitaire de France, Paris
     index: 4
@@ -50,13 +50,13 @@ This plugin significantly reduces the time required to obtain complete volumetri
 # Statement of need
 Accurate annotation of vascular networks in medical imaging remains a critical challenge and is essential to develop accurate deep learning-based segmentation models. Current segmentation models still struggle with preserving the connectivity of complex vascular networks which is crucial for downstream tasks such as flow dynamic simulations. Improving the quality and precision of annotated datasets is crucial for training more effective models. However, traditional manual annotation methods are extremely time-consuming and subject to inter-observer variability creating important concept shifts in the annotation, ultimately leading to lower model performance [@rouge2025]. 
 
-Existing vessel annotation tools have notable limitations. Traditional paint and brush tools in image analysis software such as *3D Slicer* [^1] [@pinter2019] or *ImageJ* [^2] required slice-by-slice pixel-level annotation, making the process extremely laborious and often resulting in disconnected segmentations. Tubular shape prior tools have been proposed, such as the *Draw Tube* tool from the [SlicerSegmentEditorExtraEffects extension](https://github.com/lassoan/SlicerSegmentEditorExtraEffects). However, this method requires manually drawing each vessel separately, and its fixed tubular shape is poorly suited for real vessels, which exhibit tortuosity and variable radii. Additionally, constructing a fully connected vascular tree remains particularly challenging.
+Existing vessel annotation tools have notable limitations. Traditional paint and brush tools in image analysis software such as *3D Slicer*[^1] [@pinter2019] or *ImageJ*[^2] required slice-by-slice pixel-level annotation, making the process extremely laborious and often resulting in disconnected segmentations. Tubular shape prior tools have been proposed, such as the *Draw Tube* tool from the [SlicerSegmentEditorExtraEffects extension](https://github.com/lassoan/SlicerSegmentEditorExtraEffects). However, this method requires manually drawing each vessel separately, and its fixed tubular shape is poorly suited for real vessels, which exhibit tortuosity and variable radii. Additionally, constructing a fully connected vascular tree remains particularly challenging.
 
 Recently, Lamy *et al.* proposed the *RVXLiverSegmentation* plugin [@lamy2022] for 3D Slicer to segment hepatic vascular networks. This tool enables fast and accurate vascular segmentation by requiring users to place predetermined points at branching nodes. However, it is designed specifically for the hepatic vasculature and is not applicable to other organs.
 *VSMOD* is designed to overcome these limitations by providing a user-friendly plugin for efficiently generating accurate and topologically correct vascular segmentations.
 
-[^1] [https://www.slicer.org/](https://www.slicer.org/)
-[^2] [https://imagej.net/ij/](https://imagej.net/ij/)
+[^1]: [https://www.slicer.org/](https://www.slicer.org/)
+[^2]: [https://imagej.net/ij/](https://imagej.net/ij/)
 
 # Overview of VSMOD
 *VSMOD* integrates two complementary modules (cf. Fig. \ref{fig:vessel_example}). First, the **centerline module** uses a RANSAC centerline tracking algorithm to create a graph model of the vascular network, ensuring that parent-child relationships between vessels are preserved, and providing precise geometry and radius estimation. Then, the **segmentation module** automatically generates seeds to initialize a region growing segmentation yielding a completely connected vascular segmentation. 

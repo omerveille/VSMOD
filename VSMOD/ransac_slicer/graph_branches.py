@@ -58,8 +58,6 @@ def restore_lists_from_graph(graph: nx.DiGraph):
         contour_points = graph[a][b].get(
             "contour_points", [np.empty(shape=(0, 3)) for _ in range(len(centers))]
         )
-        if len(contour_points) == 0:
-            contour_points = [np.empty(shape=(0, 3)) for _ in range(len(centers))]
 
         # (TO REMOVE ITS AN ARTIFACT FROM THE PAST)
         # Recompute radius if not existant

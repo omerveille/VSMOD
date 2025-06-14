@@ -55,7 +55,9 @@ def restore_lists_from_graph(graph: nx.DiGraph):
         )
         # (THE SECOND PART IS TO REMOVE LATER ITS AN ARTIFACT FROM THE PAST)
         heights = graph[a][b].get("height", [-1 for _ in range(len(centers))])
-        contour_points = graph[a][b]["contour_points"]
+        contour_points = graph[a][b].get(
+            "contour_points", [np.empty(shape=(0, 3)) for _ in range(len(centers))]
+        )
 
         # (TO REMOVE ITS AN ARTIFACT FROM THE PAST)
         # Recompute radius if not existant

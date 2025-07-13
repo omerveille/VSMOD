@@ -219,7 +219,7 @@ class Graph_branchesTest(unittest.TestCase):
 
     def test_07_GraphBranches_save_networkX(self):
         tempfile_path = Path(slicer.app.temporaryPath).joinpath(
-            f"graph_tree_{datetime.now().strftime('%Y-%m-%d_%H:%M:%S')}"
+            f"graph_tree_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
         )
         save_path = self.graph_branches.save_networkX(
             forced_path=tempfile_path, show_success_window=False
@@ -510,7 +510,7 @@ class Graph_branchesTest(unittest.TestCase):
         lists = restore_lists_from_graph(graph)
 
         tempfile_path = Path(slicer.app.temporaryPath).joinpath(
-            f"graph_tree_{datetime.now().strftime('%Y-%m-%d_%H:%M:%S')}"
+            f"graph_tree_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
         )
         save_path = self.graph_branches.save_networkX(
             forced_path=tempfile_path, show_success_window=False

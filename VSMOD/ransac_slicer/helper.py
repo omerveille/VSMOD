@@ -30,7 +30,7 @@ def flush_timers() -> Path:
     """
 
     timer_file_path = Path().joinpath(
-        "timers_{datetime.now().strftime('%Y-%m-%d_%H:%M:%S')}.json"
+        "timers_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.json"
     )
     timer_file_path.touch(exist_ok=True)
     with open(timer_file_path, "w") as f:

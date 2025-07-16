@@ -2,6 +2,7 @@ from numba.core.typing.templates import signature
 from numba.extending import intrinsic
 import numpy as np
 from numba import njit, prange, types, config
+from sys import platform
 
 """
 Make sure to put all the JIT compiled functions in the same file, cache invalidation will fail in the case of
@@ -9,7 +10,7 @@ nested JIT compiled functions in different files. (C.F https://numba.readthedocs
 """
 
 # Setup the threading layer for parallel parts of the code
-config.THREADING_LAYER = "omp"
+config.THREADING_LAYER = "omp" if platform != "darwin" else "workqueue"
 
 
 @njit(cache=True)

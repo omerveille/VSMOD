@@ -31,7 +31,7 @@ class JitCompiledFunctionsTest(unittest.TestCase):
     def test_02_atomic_exchange(self):
         np.random.seed(42)
         for _ in range(100):
-            flag = np.random.randint(low=0, high=1000, size=(1,))
+            flag = np.random.randint(low=0, high=1000, size=(1,), dtype=np.int64)
 
             expected_old_flag_value = flag[0]
             old_flag_value = atomic_exchange(flag, 42)

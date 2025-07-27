@@ -7,6 +7,7 @@ from .popup_utils import make_custom_progress_bar
 import slicer
 import math
 import re
+from sys import platform
 from shutil import which
 
 required_modules = {
@@ -16,8 +17,11 @@ required_modules = {
     "scikit-image": version.parse("0.24.0"),
     "networkx": version.parse("3.2.1"),
     "numba": version.parse("0.60.0"),
-    "intel-openmp": version.parse("2024.2.1"),
 }
+
+# macOS seems to have issues with openmp so we use default numba threading layer
+if platform != "darwin":
+    required_modules["intel-openmp"] = version.parse("2024.2.1")
 
 
 def check_missing_module_pip() -> dict[str, version.Version]:
@@ -39,8 +43,10 @@ def check_missing_module_pip() -> dict[str, version.Version]:
     command = [PythonSlicer_path, "-m", "pip", "show", *list(required_modules.keys())]
     proc = slicer.util.launchConsoleProcess(command, useStartupEnvironment=False)
 
-    command_output: str = proc.stdout.read()
-    found_modules = re.findall(r"Name:\s*(.+)\s*Version:\s*(.+)\s*", command_output)
+    command_output: str = proc.stdout.buffer.read().decode("utf-8")
+    regexp = r"Name:\s*([\w-]+)\r?\s*Version:\s*([0-9\.]+)\r?\s*"
+
+    found_modules = re.findall(regexp, command_output)
     found_modules = {
         package_name: version.parse(package_version)
         for package_name, package_version in found_modules

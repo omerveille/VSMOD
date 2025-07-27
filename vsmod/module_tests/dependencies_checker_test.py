@@ -16,9 +16,7 @@ class DependenciesInstallationTest(unittest.TestCase):
         slicer.mrmlScene.Clear()
         self.addCleanup(self.handle_failure)
         with mute_outputs():
-            pip_uninstall(
-                "numpy scipy trimesh scikit-image networkx numba intel-openmp"
-            )
+            pip_uninstall(" ".join([str(key) for key in required_modules.keys()]))
             missing_modules = check_missing_module_pip()
 
             self.assertDictEqual(missing_modules, required_modules)

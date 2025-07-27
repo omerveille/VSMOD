@@ -60,11 +60,11 @@ from networkx.readwrite import json_graph
 import networkx as nx
 
 #
-# VSMOD
+# vsmod
 #
 
 
-class VSMOD(ScriptedLoadableModule):
+class vsmod(ScriptedLoadableModule):
     """
     Uses ScriptedLoadableModule base class, available at:
     https://github.com/Slicer/Slicer/blob/main/Base/Python/slicer/ScriptedLoadableModule.py
@@ -72,7 +72,7 @@ class VSMOD(ScriptedLoadableModule):
 
     def __init__(self, parent):
         ScriptedLoadableModule.__init__(self, parent)
-        self.parent.title = "VSMOD"
+        self.parent.title = "vsmod"
         self.parent.categories = ["Segmentation"]
         self.parent.dependencies = []
         self.parent.contributors = ["Azéline Aillet", "Gabriel Husak"]
@@ -87,12 +87,12 @@ The hierarchy code is based on the work of Lucie Macron (Kitware SAS), Thibault 
 
 
 #
-# VSMODParameterNode
+# vsmodParameterNode
 #
 
 
 @parameterNodeWrapper
-class VSMODParameterNode:
+class vsmodParameterNode:
     """
     Class to wrap the inputs of the plugin's interface, the fields are automaticaly updated.
 
@@ -142,11 +142,11 @@ class VSMODParameterNode:
 
 
 #
-# VSMODWidget
+# vsmodWidget
 #
 
 
-class VSMODWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
+class vsmodWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     """
     Uses ScriptedLoadableModuleWidget base class, available at:
     https://github.com/Slicer/Slicer/blob/main/Base/Python/slicer/ScriptedLoadableModule.py
@@ -193,7 +193,7 @@ class VSMODWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
         # Load widget from .ui file (created by Qt Designer).
         # Additional widgets can be instantiated manually and added to self.layout.
-        uiWidget = slicer.util.loadUI(self.resourcePath("UI/VSMOD.ui"))
+        uiWidget = slicer.util.loadUI(self.resourcePath("UI/vsmod.ui"))
         self.layout.addWidget(uiWidget)
         self.ui = slicer.util.childWidgetVariables(uiWidget)
 
@@ -222,7 +222,7 @@ class VSMODWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
         # Create logic class. Logic implements all computations that should be possible to run
         # in batch mode, without a graphical user interface.
-        self.logic = VSMODLogic()
+        self.logic = vsmodLogic()
 
         self.branch_tree = BranchTree()
         begin_tab = self.ui.tabWidget.widget(0)
@@ -396,7 +396,7 @@ class VSMODWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
     def setParameterNode(
         self,
-        inputParameterNode: Optional[VSMODParameterNode],
+        inputParameterNode: Optional[vsmodParameterNode],
     ) -> None:
         """
         Set and observe parameter node.
@@ -996,11 +996,11 @@ class VSMODWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
 
 #
-# VSMODLogic
+# vsmodLogic
 #
 
 
-class VSMODLogic(ScriptedLoadableModuleLogic):
+class vsmodLogic(ScriptedLoadableModuleLogic):
     """
     This class should implement all the actual
     computation done by your module.  The interface
@@ -1021,7 +1021,7 @@ class VSMODLogic(ScriptedLoadableModuleLogic):
         """
         Returns parent's parameter node.
         """
-        return VSMODParameterNode(super().getParameterNode())
+        return vsmodParameterNode(super().getParameterNode())
 
     def processBranch(
         self,
@@ -1104,11 +1104,11 @@ class VSMODLogic(ScriptedLoadableModuleLogic):
 
 
 #
-# VSMODTest
+# vsmodTest
 #
 
 
-class VSMODTest(ScriptedLoadableModuleTest):
+class vsmodTest(ScriptedLoadableModuleTest):
     """
     This is the test case for your scripted module.
     Uses ScriptedLoadableModuleTest base class, available at:

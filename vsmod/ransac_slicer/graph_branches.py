@@ -368,7 +368,7 @@ class GraphBranches:
                 None,
                 "Save as",
                 Path.home().joinpath(
-                    f"graph_tree_{datetime.now().strftime('%Y-%m-%d_%H:%M:%S')}.json"
+                    f"graph_tree_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.json"
                 ),
             )
 

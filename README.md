@@ -3,6 +3,7 @@
 - [VSMOD, a Vessel Segmentation and MODelization 3D Slicer plugin](#vsmod-a-vessel-segmentation-and-modelization-3d-slicer-plugin)
   - [Overview 🌐](#overview-)
   - [Installation 📂](#installation-)
+  - [Testing 🧪](#testing-)
   - [How to use the plugin 💡](#how-to-use-the-plugin-)
     - [The centerline tab ➰](#the-centerline-tab-)
       - [Advanced RANSAC configuration 🔬](#advanced-ransac-configuration-)
@@ -56,6 +57,31 @@ Tips: If you struggle to find any of those modules, you can use the magnifying g
 **macOS-specific notes:**
 - The plugin uses a different threading layer on macOS (built-in numba threading instead of intel-openmp) which may be slightly slower but ensures compatibility.
 - If you encounter any Python console errors during installation, this is expected behavior on macOS.
+
+## Testing 🧪
+
+VSMOD includes comprehensive automated tests to verify the functionality of the software. The test suite covers individual functions with multiple test cases and includes an end-to-end integration test.
+
+### Running the Tests
+
+To run the automated tests:
+
+1) Ensure VSMOD is properly installed and loaded in 3D Slicer.
+2) Set 3D Slicer to **Developer Mode**:
+   - Go to `Edit -> Application Settings -> Developer`
+   - Check "Enable developer mode"
+   - Restart 3D Slicer
+3) Navigate to the VSMOD module in 3D Slicer.
+4) Click the **"Reload and Test"** button in the module interface.
+
+![tests](Images/running_tests.png)
+
+**Important notes:**
+- ⚠️ The tests take approximately **4-5 minutes** to complete.
+- The test suite includes multiple test cases per function and a comprehensive end-to-end test.
+- Do not interrupt the testing process once it has started.
+
+The tests will automatically verify that all plugin functionality works correctly on your system.
 
 ## How to use the plugin 💡
 

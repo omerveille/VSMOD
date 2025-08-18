@@ -26,6 +26,8 @@ To perform a full modeling process, follow these three steps:
 
 ## Installation 📂
 
+### Standard Installation (Windows/Linux)
+
 To install the plugin, you have to do the following steps:
 
 1) Download the plugin as a zip file or clone this repository. If you downloaded a zip file, extract it. You can clone/extract it wherever you want.
@@ -37,6 +39,23 @@ To install the plugin, you have to do the following steps:
 [plugin_install.webm](https://github.com/user-attachments/assets/1708b30e-80d1-4638-b632-66233986236f)
 
 Tips: If you struggle to find any of those modules, you can use the magnifying glass to search modules by name.
+
+### macOS Installation
+
+1) Download the plugin as a zip file or clone this repository. If you downloaded a zip file, extract it. You can clone/extract it wherever you want.
+2) Start 3D Slicer, in the menu top bar of Slicer's window, click `Edit -> Application Settings`, a new window will open :
+  1. Select `Modules`.
+  2. Click on the arrow on the right.
+  3. Click `add`.
+  4. Now you will have to select the VSMOD module, meaning the VSMOD directory which is inside the VSMOD github repository directory. (check the path selected)
+  5. Click on the OK button, Slicer should restart. VSMOD should now appear in the module drop-down menu under the `Segmentation` category.
+  **Note**: Due to a restart issue on macOS, you may end up with two Slicer instances open. Close both and start a new instance of Slicer.
+
+![settings](Images/macos_settings_installation.png)
+
+**macOS-specific notes:**
+- The plugin uses a different threading layer on macOS (built-in numba threading instead of intel-openmp) which may be slightly slower but ensures compatibility.
+- If you encounter any Python console errors during installation, this is expected behavior on macOS.
 
 ## How to use the plugin 💡
 

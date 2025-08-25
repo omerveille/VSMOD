@@ -3,6 +3,7 @@
 - [VSMOD, a Vessel Segmentation and MODelization 3D Slicer plugin](#vsmod-a-vessel-segmentation-and-modelization-3d-slicer-plugin)
   - [Overview 🌐](#overview-)
   - [Installation 📂](#installation-)
+  - [Testing 🧪](#testing-)
   - [How to use the plugin 💡](#how-to-use-the-plugin-)
     - [The centerline tab ➰](#the-centerline-tab-)
       - [Advanced RANSAC configuration 🔬](#advanced-ransac-configuration-)
@@ -26,6 +27,8 @@ To perform a full modeling process, follow these three steps:
 
 ## Installation 📂
 
+### Standard Installation (Windows/Linux)
+
 To install the plugin, you have to do the following steps:
 
 1) Download the plugin as a zip file or clone this repository. If you downloaded a zip file, extract it. You can clone/extract it wherever you want.
@@ -37,6 +40,48 @@ To install the plugin, you have to do the following steps:
 [plugin_install.webm](https://github.com/user-attachments/assets/1708b30e-80d1-4638-b632-66233986236f)
 
 Tips: If you struggle to find any of those modules, you can use the magnifying glass to search modules by name.
+
+### macOS Installation
+
+1) Download the plugin as a zip file or clone this repository. If you downloaded a zip file, extract it. You can clone/extract it wherever you want.
+2) Start 3D Slicer, in the menu top bar of Slicer's window, click `Edit -> Application Settings`, a new window will open :
+  1. Select `Modules`.
+  2. Click on the arrow on the right.
+  3. Click `add`.
+  4. Now you will have to select the VSMOD module, meaning the VSMOD directory which is inside the VSMOD github repository directory. (check the path selected)
+  5. Click on the OK button, Slicer should restart. VSMOD should now appear in the module drop-down menu under the `Segmentation` category.
+  **Note**: Due to a restart issue on macOS, you may end up with two Slicer instances open. Close both and start a new instance of Slicer.
+
+![settings](Images/macos_settings_installation.png)
+
+**macOS-specific notes:**
+- The plugin uses a different threading layer on macOS (built-in numba threading instead of intel-openmp) which may be slightly slower but ensures compatibility.
+- If you encounter any Python console errors during installation, this is expected behavior on macOS.
+
+## Testing 🧪
+
+VSMOD includes comprehensive automated tests to verify the functionality of the software. The test suite covers individual functions with multiple test cases and includes an end-to-end integration test.
+
+### Running the Tests
+
+To run the automated tests:
+
+1) Ensure VSMOD is properly installed and loaded in 3D Slicer.
+2) Set 3D Slicer to **Developer Mode**:
+   - Go to `Edit -> Application Settings -> Developer`
+   - Check "Enable developer mode"
+   - Restart 3D Slicer
+3) Navigate to the VSMOD module in 3D Slicer.
+4) Click the **"Reload and Test"** button in the module interface.
+
+![tests](Images/running_tests.png)
+
+**Important notes:**
+- ⚠️ The tests take approximately **4-5 minutes** to complete.
+- The test suite includes multiple test cases per function and a comprehensive end-to-end test.
+- Do not interrupt the testing process once it has started.
+
+The tests will automatically verify that all plugin functionality works correctly on your system.
 
 ## How to use the plugin 💡
 

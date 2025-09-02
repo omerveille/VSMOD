@@ -1,3 +1,5 @@
+from datetime import datetime
+import tempfile
 import numpy as np
 import trimesh.primitives as tp
 import time
@@ -5,6 +7,7 @@ import json
 from pathlib import Path
 
 timers = []
+temp_dir = Path(tempfile.mkdtemp(prefix="slicer_time_function_"))
 
 
 def time_function(func):
@@ -29,10 +32,9 @@ def flush_timers() -> Path:
         The path to the created file.
     """
 
-    timer_file_path = Path().joinpath(
-        "timers_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.json"
+    timer_file_path = (
+        temp_dir / f"timers_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.json"
     )
-    timer_file_path.touch(exist_ok=True)
     with open(timer_file_path, "w") as f:
         json.dump(timers, f, indent=4)
     timers.clear()

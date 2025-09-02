@@ -1,16 +1,18 @@
 # VSMOD, a Vessel Segmentation and MODelization 3D Slicer plugin
-<!-- TOC -->
 - [VSMOD, a Vessel Segmentation and MODelization 3D Slicer plugin](#vsmod-a-vessel-segmentation-and-modelization-3d-slicer-plugin)
   - [Overview 🌐](#overview-)
   - [Installation 📂](#installation-)
+    - [Standard Installation (Windows/Linux) 🐧](#standard-installation-windowslinux-)
+    - [macOS Installation 🍎](#macos-installation-)
   - [Testing 🧪](#testing-)
+    - [Running the automated tests 🏃](#running-the-automated-tests-)
+    - [Sample data 📝](#sample-data-)
   - [How to use the plugin 💡](#how-to-use-the-plugin-)
     - [The centerline tab ➰](#the-centerline-tab-)
       - [Advanced RANSAC configuration 🔬](#advanced-ransac-configuration-)
     - [The segmentation tab 🧩](#the-segmentation-tab-)
       - [Advanced features ⚙️](#advanced-features-️)
   - [Acknowledgments and citations 🙏](#acknowledgments-and-citations-)
-<!-- TOC -->
 ## Overview 🌐
 
 VSMOD is a 3D Slicer plugin that aims to ease Vessel Segmentation and MODelization for angiography images.
@@ -27,7 +29,7 @@ To perform a full modeling process, follow these three steps:
 
 ## Installation 📂
 
-### Standard Installation (Windows/Linux)
+### Standard Installation (Windows/Linux) 🐧
 
 To install the plugin, you have to do the following steps:
 
@@ -41,7 +43,7 @@ To install the plugin, you have to do the following steps:
 
 Tips: If you struggle to find any of those modules, you can use the magnifying glass to search modules by name.
 
-### macOS Installation
+### macOS Installation 🍎
 
 1) Download the plugin as a zip file or clone this repository. If you downloaded a zip file, extract it. You can clone/extract it wherever you want.
 2) Start 3D Slicer, in the menu top bar of Slicer's window, click `Edit -> Application Settings`, a new window will open :
@@ -62,7 +64,7 @@ Tips: If you struggle to find any of those modules, you can use the magnifying g
 
 VSMOD includes comprehensive automated tests to verify the functionality of the software. The test suite covers individual functions with multiple test cases and includes an end-to-end integration test.
 
-### Running the Tests
+### Running the automated tests 🏃
 
 To run the automated tests:
 
@@ -82,6 +84,10 @@ To run the automated tests:
 - Do not interrupt the testing process once it has started.
 
 The tests will automatically verify that all plugin functionality works correctly on your system.
+
+### Sample data 📝
+
+If you do not have your own data to test the plugin, and you wish to, you can use the MRA images from the [IXI dataset](https://brain-development.org/ixi-dataset/). We used the `IXI002-Guys-0828-MRA.nii.gz` file in our automated tests.
 
 ## How to use the plugin 💡
 
@@ -185,4 +191,4 @@ The RANSAC code is based on the previous work of Jack CARBONERO (CReSTIC), Guill
 
 The hierarchy code is based on the work of Lucie Macron (Kitware SAS), Thibault Pelletier (Kitware SAS), Camille Huet (Kitware SAS), Leo Sanchez (Kitware SAS) from the RVesselX plugin.
 
-The IXI002-Guys-0828-MRA.nii.gz file used in the tests is part of the IXI MRA image dataset and can be found [here](https://brain-development.org/ixi-dataset/). This specific data file is made available under the Creative Commons [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/legalcode) license.
+The `IXI002-Guys-0828-MRA.nii.gz` file used in the tests is part of the IXI MRA image dataset and can be found [here](https://brain-development.org/ixi-dataset/). This specific data file is made available under the Creative Commons [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/legalcode) license.

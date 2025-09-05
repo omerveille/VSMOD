@@ -87,7 +87,7 @@ The tests will automatically verify that all plugin functionality works correctl
 
 ### Sample data 📝
 
-If you do not have your own data to test the plugin, and you wish to, you can use the MRA images from the [IXI dataset](https://brain-development.org/ixi-dataset/). We used the `IXI002-Guys-0828-MRA.nii.gz` file in our automated tests.
+If you do not have your own data to test the plugin, and you wish to, you can use the MRA images from the [IXI dataset](https://brain-development.org/ixi-dataset/). For our automated tests, we used the `IXI002-Guys-0828-MRA.nii.gz` file, which you can find [here](./vsmod/Resources/Test/IXI002-Guys-0828-MRA.nii.gz) in the repository.
 
 ## How to use the plugin 💡
 

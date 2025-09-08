@@ -86,7 +86,7 @@ The background seeds are produced by applying dilation and subtraction operation
 ## Reduction of the annotation time
 In this section we compare the time to annotate a complete pulmonary vascular network from a computed tomography pulmonary angiography (CTPA).
 
-Ten computed tomography pulmonary angiography (CTPA) images were extensively annotated with the *VSMOD* plugin by an expert who reported an average time of 3 hours and 35 minutes per image to annotate the complete vascular network (269 vessels on average per image).
+Ten CTPA images were extensively annotated with the *VSMOD* plugin by an expert who reported an average time of 3 hours and 35 minutes per image to annotate the complete vascular network (269 vessels on average per image).
 
 Most of this time was spent in the centerline module, where users manually place vessel start and directional points. Additional time was dedicated to refining seed placement around embolized regions, which required extra attention due to their complexity.
 

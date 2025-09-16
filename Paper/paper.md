@@ -16,6 +16,7 @@ authors:
   - name: Azéline Aillet
     affiliation: 2
   - name: Guillaume Dollé
+    orcid : 0000-0002-5844-2536
     affiliation: 3
   - name: Carole Frindel
     orcid: 0000-0003-4570-0994

@@ -26,13 +26,13 @@ authors:
     corresponding: true
     affiliation: 1
 affiliations:
-  - name: Univ Lyon, INSA‐Lyon, Université Claude Bernard Lyon 1, UJM-Saint Etienne, CNRS, Inserm, CREATIS UMR 5220, U1294, Lyon, France.
+  - name: Univ Lyon, INSA‐Lyon, Université Claude Bernard Lyon 1, UJM-Saint Etienne, CNRS, Inserm, CREATIS UMR 5220, U1294, Lyon, France
     index: 1
   - name: EPITA Research Laboratory (LRE), Le Kremlin-Bicêtre, France
     index: 2
-  - name: Université de Reims Champagne-Ardenne, CNRS, LMR UMR 9008, Reims
+  - name: Université de Reims Champagne-Ardenne, CNRS, LMR UMR 9008, Reims, France
     index: 3
-  - name: IUF, Institut Universitaire de France, Paris
+  - name: IUF, Institut Universitaire de France, Paris, France
     index: 4
 date: 8 Avril 2025
 bibliography: paper.bib
@@ -68,9 +68,7 @@ Recently, Lamy *et al.* proposed the *RVXLiverSegmentation* plugin [@lamy2022] f
 
 ![Example of the centerline module interface. Green dots represent user-selected points, while blue and pink lines indicate centerlines detected by the RANSAC algorithm. The bottom-left panel displays the vascular graph, where the b1 branch splits into b2 and b3.\label{fig:centerline_tab}](images/centerline_tab.png){ width=75% }
 
-The first module of *VSMOD* extracts vessel centerlines (cf. Fig. \ref{fig:centerline_tab}). Users begin by placing starting and directional points to define the initial vessel path. Then, the RANSAC algorithm [@yureidini2012] iteratively tracks points along the vessel centerline. At vessel intersections, the algorithm randomly selects a branch and continues tracking until it reaches the end of the vessel.
-To annotate additional vessels, the user selects two new points near an existing centerline. The algorithm then automatically detects the new branch and connects it to the previously identified centerlines.
-An estimate of the diameter of the vessel at the beginning of the vessel has to be set when launching the algorithm for the first time. This is the only parameter that is required. The other RANSAC algorithm parameters can be set manually by the user for a fine user control, but good default values are provided.
+The first module of *VSMOD* extracts vessel centerlines (cf. Fig. \ref{fig:centerline_tab}). Users begin by placing starting and directional points to define the initial vessel path. The RANSAC algorithm [@yureidini2012] then tracks the vessel centerline automatically. To annotate additional vessels, users select two new points near an existing centerline, and the algorithm connects the new branch to the previously identified centerlines. An estimate of the first vessel diameter is the only required parameter when launching the algorithm for the first time.
 
 Additionally, this module enables users to export and load a vascular network as a NetworkX graph [@hagberg2008] in JSON format. This feature allows for pausing and resuming the annotation process while preserving the vessel hierarchy and structural relationships for further computational analysis.
 
@@ -78,9 +76,7 @@ Additionally, this module enables users to export and load a vascular network as
 
 ![Example of the segmentation module interface with automatically generated seed points on a patient's axial view. The automatic seeds are displayed in different colors inside the vessels (pink, purple and green) and surrounded by the yellow border to constrain the region growing process.\label{fig:segmentation_tab}](images/segmentation_tab.png){ width=75% }
 
-The second module of *VSMOD* transforms the extracted centerline data into a volumic vessel segmentation (cf. Fig. \ref{fig:segmentation_tab}). This process leverages the "Grow from seeds" region growing segmentation tools from 3D Slicer [@zhu2014] to refine and expand the segmentation.
-The process begins with the automatic generation of seed points along the detected centerline. The seed size is determined by the radius estimations obtained from the previous step. These seeds serve as anchor points, guiding the segmentation along the vessel path.
-The background seeds are produced by applying dilation and subtraction operations, to create a raw boundary outside the vessels. This ensures that the region-growing process remains confined within the vascular structure and does not extend into surrounding tissues. The distance between the edge of the vessel and the outside boundary is a parameter that can be adjusted by the user.
+The second module of *VSMOD* transforms the extracted centerline data into a volumic vessel segmentation (cf. Fig. \ref{fig:segmentation_tab}). This process leverages the "Grow from seeds" region growing segmentation tools from 3D Slicer [@zhu2014]. Seed points are automatically generated along the detected centerlines, with seed sizes determined by radius estimations from the centerline module. Background seeds create boundaries to constrain the region-growing process within vascular structures.
 
 # Results
 
@@ -98,7 +94,7 @@ Beyond efficiency gains, *VSMOD* offers additional advantages by automatically g
 | Annotation method | Time per vessel | Total time per patient |
 |:---:|:---:|:---:|
 | Manual | 4m46s | 21h22m52s |
-| *VSMOD* | 48s | 3h35min12s |
+| *VSMOD* | 48s | 3h35m12s |
 
 Table: Comparison of average segmentation times per patient calculated on data with an average of 269 vessels
 \label{table:segmentation_comparison}

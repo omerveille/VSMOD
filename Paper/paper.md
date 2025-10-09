@@ -39,16 +39,15 @@ bibliography: paper.bib
 ---
 
 # Summary
-The volumetric annotation of vessels in medical images is a challenging and time-consuming task that typically requires extensive expert manual work. *VSMOD* is a free, user-friendly plugin for 3D Slicer [@fedorov2012] designed to simplify and streamline the vascular annotation process. *VSMOD* offers a semi-automatic two-step segmentation approach, that combines RANSAC-based centerline detection [@yureidini2012] and a region growing approach with automatic seed selection to accelerate vessel annotation. Users can interactively generate vessel centerlines by placing two points -- one marking the vessel's starting location, and the other indicating its initial direction thereby defining a branch. Additional branches are created by tracking a new branch near existing ones. From these centerlines, a vascular tree graph is automatically constructed and can be exported as a NetworkX graph [@hagberg2008], facilitating efficient data storage and external manipulation. Finally, a region growing segmentation is applied using seeds automatically derived from the centerlines.
+The volumetric annotation of vessels in medical images is a challenging and time-consuming task that typically requires extensive expert manual work. *VSMOD* is a free, user-friendly plugin for 3D Slicer [@fedorov2012] designed to simplify and streamline the vascular annotation process. *VSMOD* offers a semi-automatic two-step segmentation approach that combines RANSAC-based centerline detection [@yureidini2012] and a region-growing approach with automatic seed selection to accelerate vessel annotation. Users can interactively generate vessel centerlines by placing two points -- one marking the vessel's starting location, and the other indicating its initial direction, thereby defining a branch. Additional branches are created by tracking a new branch near existing ones. From these centerlines, a vascular tree graph is automatically constructed and can be exported as a NetworkX graph [@hagberg2008], facilitating efficient data storage and external manipulation. Finally, a region-growing segmentation is applied using seeds automatically derived from the centerlines.
 
 Initially designed for pulmonary artery annotation, *VSMOD*'s methodology is adaptable to various vascular structures across different organs (e.g., brain, liver).
 This plugin significantly reduces the time required to obtain complete volumetric vessel segmentation. Moreover, it generates fully connected vascular trees with precise topology, which is nearly impossible to achieve with conventional annotation tools.
 
-*VSMOD* enables users to create accurate and topologically consistent vascular network annotations, facilitating large-scale supervised machine-learning dataset generation for vascular segmentation. Future developments will focus on improving the segmentation step using deep learning-based approaches and further assessing the framework's generalizability across diverse vascular segmentation tasks. The plugin is available at this [Github Repo](https://github.com/omerveille/VSMOD).
-
+*VSMOD* enables users to create accurate and topologically consistent vascular network annotations, facilitating large-scale supervised machine-learning dataset generation for vascular segmentation. Future developments will focus on improving the segmentation step using deep learning-based approaches and further assessing the framework's generalizability across diverse vascular segmentation tasks.
 
 # Statement of need
-Accurate annotation of vascular networks in medical imaging remains a critical challenge and is essential to develop accurate deep learning-based segmentation models. Current segmentation models still struggle with preserving the connectivity of complex vascular networks [@esteves2025; @rouge2024; @Keshwani2020] which is crucial for downstream tasks such as flow dynamic simulations. Improving the quality and precision of annotated datasets is crucial for training more effective models. However, traditional manual annotation methods are extremely time-consuming and subject to inter-observer variability creating important concept shifts in the annotation, ultimately leading to lower model performance [@rouge2025].
+Accurate annotation of vascular networks in medical imaging remains a critical challenge and is essential to develop accurate deep learning-based segmentation models. Current segmentation models still struggle with preserving the connectivity of complex vascular networks [@esteves2025; @rouge2024; @Keshwani2020], which is crucial for downstream tasks such as flow dynamic simulations. Improving the quality and precision of annotated datasets is crucial for training more effective models. However, traditional manual annotation methods are extremely time-consuming and subject to inter-observer variability, creating important concept shifts in the annotation, ultimately leading to lower model performance [@rouge2025].
 
 Existing vessel annotation tools have notable limitations. Traditional paint and brush tools in image analysis software such as *3D Slicer*[^1] [@pinter2019] or *ImageJ*[^2] required slice-by-slice pixel-level annotation, making the process extremely laborious and often resulting in disconnected segmentations. Tubular shape prior tools have been proposed, such as the *Draw Tube* tool from the SlicerSegmentEditorExtraEffects extension[^3]. However, this method requires manually drawing each vessel separately, and its fixed tubular shape is poorly suited for real vessels, which exhibit tortuosity and variable radii. Additionally, constructing a fully connected vascular tree remains particularly challenging.
 
@@ -60,7 +59,7 @@ Recently, Lamy *et al.* proposed the *RVXLiverSegmentation* plugin [@lamy2022] f
 [^3]: [https://github.com/lassoan/SlicerSegmentEditorExtraEffects](https://github.com/lassoan/SlicerSegmentEditorExtraEffects)
 
 # Overview of VSMOD
-*VSMOD* integrates two complementary modules (cf. Fig. \ref{fig:vessel_example}). First, the **centerline module** uses a RANSAC centerline tracking algorithm to create a graph model of the vascular network, ensuring that parent-child relationships between vessels are preserved, and providing precise geometry and radius estimation. Then, the **segmentation module** automatically generates seeds to initialize a region growing segmentation yielding a completely connected vascular segmentation.
+*VSMOD* integrates two complementary modules (cf. Fig. \ref{fig:vessel_example}). First, the **centerline module** uses a RANSAC centerline-tracking algorithm to create a graph model of the vascular network, ensuring that parent-child relationships between vessels are preserved, and providing precise geometry and radius estimation. Then, the **segmentation module** automatically generates seeds to initialize a region-growing segmentation, yielding a completely connected vascular segmentation.
 
 ![Example of the annotation process on pulmonary arteries. From left to right: a) Centerlines detected using the RANSAC-based algorithm.  b) 3D visualization of automatically placed seeds for region-growing. c) The final vessel segmentation.\label{fig:vessel_example}](images/vessel_example.png)
 
@@ -76,12 +75,12 @@ Additionally, this module enables users to export and load a vascular network as
 
 ![Example of the segmentation module interface with automatically generated seed points on a patient's axial view. The automatic seeds are displayed in different colors inside the vessels (pink, purple and green) and surrounded by the yellow border to constrain the region growing process.\label{fig:segmentation_tab}](images/segmentation_tab.png){ width=75% }
 
-The second module of *VSMOD* transforms the extracted centerline data into a volumic vessel segmentation (cf. Fig. \ref{fig:segmentation_tab}). This process leverages the "Grow from seeds" region growing segmentation tools from 3D Slicer [@zhu2014]. Seed points are automatically generated along the detected centerlines, with seed sizes determined by radius estimations from the centerline module. Background seeds create boundaries to constrain the region-growing process within vascular structures.
+The second module of *VSMOD* transforms the extracted centerline data into a volumetric vessel segmentation (cf. Fig. \ref{fig:segmentation_tab}). This process leverages the "Grow from seeds" region growing segmentation tool from 3D Slicer [@zhu2014]. Seed points are automatically generated along the detected centerlines, with seed sizes determined by radius estimations from the centerline module. Background seeds create boundaries to constrain the region-growing process within vascular structures.
 
 # Results
 
 ## Reduction of the annotation time
-In this section we compare the time to annotate a complete pulmonary vascular network from a computed tomography pulmonary angiography (CTPA).
+In this section, we compare the time to annotate a complete pulmonary vascular network from a computed tomography pulmonary angiography (CTPA).
 
 Ten CTPA images were extensively annotated with the *VSMOD* plugin by an expert who reported an average time of 3 hours and 35 minutes per image to annotate the complete vascular network (269 vessels on average per image).
 
@@ -100,7 +99,7 @@ Table: Comparison of average segmentation times per patient calculated on data w
 \label{table:segmentation_comparison}
 
 ## Plugin usage on different vascular networks
-*VSMOD* is not restricted to the vascular network of a specific organ. Its algorithms are generic and rely solely on the assumption of vessel geometry-tube-like structures with curvature. Extensive testing was conducted on the pulmonary vascular network, as discussed in the previous section. Additionally, the plugin was tested on the brain vascular network using magnetic resonance angiography (MRA). Despite the significant geometric differences between pulmonary and cerebral vessels, *VSMOD* was also able to segment these vessels, as illustrated in Fig. \ref{fig:brain_example}.
+*VSMOD* is not restricted to the vascular network of a specific organ. Its algorithms are generic and rely solely on the assumption of vessel geometry — tube-like structures with curvature. Extensive testing was conducted on the pulmonary vascular network, as discussed in the previous section. Additionally, the plugin was tested on the brain vascular network using magnetic resonance angiography (MRA). Despite the significant geometric differences between pulmonary and cerebral vessels, *VSMOD* was also able to segment these vessels, as illustrated in Fig. \ref{fig:brain_example}.
 
 ![Example of the annotation process on brain vessels. From left to right: a) Centerlines detected using the RANSAC-based algorithm.  b) 3D visualization of automatically placed seeds for region-growing. c) The final vessel segmentation.\label{fig:brain_example}](images/brain_example.png)
 
@@ -108,7 +107,7 @@ In conclusion, *VSMOD* provides a user-friendly framework for generating vascula
 By automating the most labor-intensive aspects of vascular segmentation, this module significantly reduces manual effort while still allowing users to fine-tune the results as needed.
 
 Future work will focus on optimizing RANSAC parameters by introducing anatomy-specific default settings for different types of vessels. This would minimize the need for manual fine-tuning, improving usability and adaptability.
-Additionally, integrating deep learning models could further enhance segmentation accuracy and reduce manual intervention, particularly in the segmentation module.
+Additionally, integrating deep-learning models could further enhance segmentation accuracy and reduce manual intervention, particularly in the segmentation module.
 
 # Acknowledgements
 The vascular graph modeling is inspired by the hierarchical vessel organization proposed in *RVXLiverSegmentation* [@lamy2022].

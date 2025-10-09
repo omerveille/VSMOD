@@ -73,7 +73,7 @@ Additionally, this module enables users to export and load a vascular network as
 
 ## Segmentation Module
 
-![Example of the segmentation module interface with automatically generated seed points on a patient's axial view. The automatic seeds are displayed in different colors inside the vessels (pink, purple and green) and surrounded by the yellow border to constrain the region growing process.\label{fig:segmentation_tab}](images/segmentation_tab.png){ width=75% }
+![Example of the segmentation module interface with automatically generated seed points on a patient's axial view. The automatic seeds are displayed in different colors inside the vessels (pink, purple and green) and surrounded by the yellow border to constrain the region-growing process.\label{fig:segmentation_tab}](images/segmentation_tab.png){ width=75% }
 
 The second module of *VSMOD* transforms the extracted centerline data into a volumetric vessel segmentation (cf. Fig. \ref{fig:segmentation_tab}). This process leverages the "Grow from seeds" region growing segmentation tool from 3D Slicer [@zhu2014]. Seed points are automatically generated along the detected centerlines, with seed sizes determined by radius estimations from the centerline module. Background seeds create boundaries to constrain the region-growing process within vascular structures.
 

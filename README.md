@@ -184,11 +184,9 @@ else:
 - `Merge all vessels into a single segment`: Allows you to merge all individual vessel segments into one.
 
 ## Acknowledgments and citations 🙏
+If you use VSMOD in your research, please cite the associated JOSS publication: https://doi.org/10.21105/joss.08563
 
 This plugin was initially an end-of-study project, made by Azéline Aillet (Former student at EPITA) and Gabriel Husak (Former student at EPITA), under the direction of Odyssée Merveille (CREATIS) and Morgane Des Ligneris (CREATIS).
-
 The RANSAC code is based on the previous work of Jack CARBONERO (CReSTIC), Guillaume DOLLE (LMR) and Nicolas PASSAT (CReSTIC) on the plugin vestract.
-
 The hierarchy code is based on the work of Lucie Macron (Kitware SAS), Thibault Pelletier (Kitware SAS), Camille Huet (Kitware SAS), Leo Sanchez (Kitware SAS) from the RVesselX plugin.
-
 The `IXI002-Guys-0828-MRA.nii.gz` file used in the tests is part of the IXI MRA image dataset and can be found [here](https://brain-development.org/ixi-dataset/). This specific data file is made available under the Creative Commons [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/legalcode) license.
